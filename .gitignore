@@ -1,0 +1,18 @@
+/.agents/
+
+# Dependencies
+/node_modules/
+
+# Next.js
+/.next/
+/out/
+/next-env.d.ts
+
+# Tests and tooling
+/coverage/
+*.tsbuildinfo
+
+# Environment and logs
+.env*
+!.env.example
+*.log

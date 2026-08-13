@@ -1,0 +1,26 @@
+name: chon
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5-alpine
+    # The upstream PostGIS image is currently published for linux/amd64.
+    # Docker Desktop emulates it on Apple Silicon to keep one trusted image.
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_USER: ${DATABASE_USER}
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    stop_grace_period: 10s
+
+volumes:
+  postgres_data:

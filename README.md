@@ -10,9 +10,9 @@ Ví dụ truy vấn:
 
 ## Trạng thái
 
-Dự án đang ở giai đoạn lập kế hoạch MVP.
+Dự án đã hoàn thành engineering scope của Sprint 1 và đang ở Sprint 2 — Explore map/list. Vertical slice responsive hiện đọc CSV giả lập đã import vào PostgreSQL; provider vibe vẫn tắt.
 
-Ba tài liệu cần chốt trước khi viết code:
+Tài liệu nền tảng:
 
 - [Context sản phẩm](CONTEXT.md)
 - [Plan phát triển](PLAN.md)
@@ -23,10 +23,70 @@ Tài liệu chi tiết hỗ trợ:
 - [Product brief](docs/product-brief.md)
 - [Kiến trúc và dữ liệu](docs/architecture.md)
 - [Roadmap theo sprint](ROADMAP.md)
+- [Sprint 0 review pack](SPRINT-0-REVIEW.md)
+- [Sprint 1 provider spike](PROVIDER-SPIKE.md)
+- [Provider vibe terms/credential/coverage spike](docs/provider-vibe-spike.md)
+- [Vibe taxonomy](docs/vibe-taxonomy.md)
+- [Purpose profiles](docs/purpose-profiles.md)
+- [Prototype specification](docs/prototype-spec.md)
+- [Data contract](docs/data-contract.md)
+- [Data operations](docs/data-operations.md)
+- [Data importer runbook](docs/data-import.md)
+
+Prototype để review:
+
+- Mobile: `prototype/index.html`
+- Tablet: `prototype/tablet.html`
+- Desktop: `prototype/desktop.html`
+
+## Phát triển local
+
+Yêu cầu Node.js `>=20.9.0` và pnpm `9.10.0`.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Quality checks:
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+GitHub Actions chạy `typecheck`, `lint` và `test` trên mọi push, pull request và khi kích hoạt thủ công. Workflow dùng Node.js 22, pnpm `9.10.0`, frozen lockfile và cache pnpm.
+
+Kiểm tra trạng thái feature flag, production gate và credential của các provider vibe mà không gọi API:
+
+```bash
+pnpm provider:status
+```
+
+Local database:
+
+```bash
+cp .env.example .env
+pnpm db:up
+pnpm db:migrate
+pnpm db:verify
+pnpm data:import seed --dir data/fixtures --environment local --dry-run
+pnpm data:import seed --dir data/fixtures --environment local
+pnpm data:verify
+```
+
+Explore local không đọc CSV trực tiếp và không hard-code địa điểm/vibe trong UI. CSV trong `data/fixtures` chỉ là dữ liệu giả lập; importer validate và ghi nó vào PostgreSQL, sau đó server repository truy vấn DB để render trang.
+
+Xem quy trình migration và nguyên tắc an toàn tại [Database runbook](docs/database.md).
 
 ## Trạng thái quyết định
 
-Chưa bắt đầu implementation. Context, plan và tech stack đang là đề xuất cần review; các quyết định chưa được xem là cố định cho tới khi được chốt.
+Sprint 0 hoàn thành ngày 2026-08-13. Taxonomy v1 và data contract v1.0 đã được duyệt; contract hiện ở v1.1 sau addendum provider vibe. Sprint 1 đã scaffold ứng dụng, thiết lập PostgreSQL/PostGIS/Drizzle, tạo core schema, provider provenance mapping và `provider_vibe_signals`; local migration cùng integration verification đã pass trên cổng `5432`.
+
+Các task cần collect thông tin thật đang được hoãn. Sprint 0 hiện tập trung vào product definition và technical prototype; dự án chưa được xem là đã product validation.
 
 ## Phạm vi MVP đề xuất
 
@@ -40,7 +100,8 @@ Chưa bắt đầu implementation. Context, plan và tech stack đang là đề 
 
 - POI nền lấy từ provider bên thứ ba có điều khoản phù hợp.
 - Founder/curator xác minh seed bằng CSV; developer chạy validation/import script.
-- Vibe cộng đồng được thu trực tiếp từ người dùng trên Chốn.
+- Vibe được kết hợp từ đóng góp trực tiếp trên Chốn và provider signals từ Foursquare Places Pro/Premium, Google Places, Yelp, Tripadvisor.
+- Provider signals dùng cho cold-start/bổ trợ, lưu tách khỏi `vibe_reports` và chỉ bật sau gate về coverage, quyền sử dụng, attribution, credential và chi phí.
 - Admin Dashboard không thuộc MVP và chỉ được cân nhắc sau beta.
 
 | Data type | Mục đích | Môi trường |

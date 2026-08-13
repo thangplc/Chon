@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>Chốn — Mobile prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="prototype-shell" aria-label="Chốn mobile prototype">
+      <div class="simulation-banner">Prototype · dữ liệu mô phỏng</div>
+
+      <section
+        class="screen is-active"
+        data-screen="explore"
+        aria-labelledby="explore-title"
+      >
+        <header class="app-header">
+          <div>
+            <p class="eyebrow">TP. Hồ Chí Minh</p>
+            <h1 id="explore-title">Hôm nay bạn cần một Chốn thế nào?</h1>
+          </div>
+          <div class="brand-mark" aria-label="Chốn">C</div>
+        </header>
+
+        <div class="screen-content">
+          <fieldset class="field-group">
+            <legend>Mục đích</legend>
+            <div class="purpose-grid" id="purpose-grid">
+              <button
+                class="purpose-card is-selected"
+                type="button"
+                data-purpose="work"
+                aria-pressed="true"
+              >
+                <span class="purpose-icon" aria-hidden="true">⌁</span>
+                <strong>Làm việc</strong>
+                <small>Yên và dễ tập trung</small>
+              </button>
+              <button
+                class="purpose-card"
+                type="button"
+                data-purpose="solo"
+                aria-pressed="false"
+              >
+                <span class="purpose-icon" aria-hidden="true">○</span>
+                <strong>Đi một mình</strong>
+                <small>Thoải mái, không áp lực</small>
+              </button>
+              <button
+                class="purpose-card"
+                type="button"
+                data-purpose="date"
+                aria-pressed="false"
+              >
+                <span class="purpose-icon" aria-hidden="true">♡</span>
+                <strong>Hẹn hò</strong>
+                <small>Dễ nói chuyện, riêng tư</small>
+              </button>
+              <button
+                class="purpose-card"
+                type="button"
+                data-purpose="study"
+                aria-pressed="false"
+              >
+                <span class="purpose-icon">▤</span><strong>Học/đọc</strong
+                ><small>Sáng và ít phân tâm</small>
+              </button>
+              <button
+                class="purpose-card"
+                type="button"
+                data-purpose="friends"
+                aria-pressed="false"
+              >
+                <span class="purpose-icon">◇</span><strong>Gặp bạn</strong
+                ><small>Bàn nhóm, có sức sống</small>
+              </button>
+              <button
+                class="purpose-card"
+                type="button"
+                data-purpose="business_meeting"
+                aria-pressed="false"
+              >
+                <span class="purpose-icon">□</span><strong>Họp việc</strong
+                ><small>Yên và riêng tư</small>
+              </button>
+              <button
+                class="purpose-card"
+                type="button"
+                data-purpose="relax"
+                aria-pressed="false"
+              >
+                <span class="purpose-icon">~</span><strong>Thư giãn</strong
+                ><small>Thoáng và nhịp chậm</small>
+              </button>
+              <button
+                class="purpose-card"
+                type="button"
+                data-purpose="late_night"
+                aria-pressed="false"
+              >
+                <span class="purpose-icon">◐</span><strong>Đi khuya</strong
+                ><small>Mở muộn, còn chỗ</small>
+              </button>
+            </div>
+          </fieldset>
+
+          <div class="form-row time-location-row">
+            <label class="control-label" for="visit-time">
+              Thời gian
+              <select id="visit-time">
+                <option value="now">Ngay bây giờ</option>
+                <option value="morning">Sáng nay · 09:00</option>
+                <option value="afternoon">Chiều nay · 15:00</option>
+                <option value="evening">Tối nay · 19:30</option>
+                <option value="late">Khuya · 22:30</option>
+                <option value="custom">Chọn ngày và giờ…</option>
+              </select>
+            </label>
+            <label class="control-label" for="district">
+              Khu vực
+              <select id="district">
+                <option value="all">Vị trí hiện tại</option>
+                <option value="Quận 1">Quận 1</option>
+                <option value="Quận 3">Quận 3</option>
+                <option value="Bình Thạnh">Bình Thạnh</option>
+                <option value="map">Chọn trên bản đồ…</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="custom-options">
+            <label class="control-label" for="location-search"
+              >Tìm khu vực<input
+                id="location-search"
+                type="search"
+                placeholder="Thảo Điền, Hồ Con Rùa…"
+            /></label>
+            <div class="form-row">
+              <label class="control-label" for="radius"
+                >Bán kính<select id="radius">
+                  <option>500 m</option>
+                  <option selected>1 km</option>
+                  <option>3 km</option>
+                  <option>5 km</option>
+                </select></label
+              >
+              <label class="control-label" for="duration"
+                >Ngồi khoảng<select id="duration">
+                  <option>Không rõ</option>
+                  <option>Dưới 1 giờ</option>
+                  <option selected>1–2 giờ</option>
+                  <option>Trên 2 giờ</option>
+                </select></label
+              >
+            </div>
+            <div id="custom-datetime" class="form-row" hidden>
+              <label class="control-label"
+                >Ngày<input type="date" value="2026-08-15"
+              /></label>
+              <label class="control-label"
+                >Giờ<input type="time" value="19:30"
+              /></label>
+            </div>
+            <div id="map-picker" class="mini-map-picker" hidden>
+              <span>Đặt tâm tìm kiếm trên bản đồ</span
+              ><button type="button" id="confirm-map-point">
+                Dùng vị trí này
+              </button>
+            </div>
+          </div>
+
+          <details class="advanced-filters">
+            <summary>
+              Bộ lọc nâng cao <span>Không gian · Tiện ích · Giá</span>
+            </summary>
+            <div class="filter-section">
+              <strong>Quy mô</strong>
+              <div class="chip-group">
+                <button type="button" class="choice-chip">Nhỏ, ấm cúng</button
+                ><button type="button" class="choice-chip">Vừa</button
+                ><button type="button" class="choice-chip">Rộng, thoáng</button>
+              </div>
+            </div>
+            <div class="filter-section">
+              <strong>Tiện ích</strong>
+              <div class="chip-group">
+                <button type="button" class="choice-chip">Wi-Fi</button
+                ><button type="button" class="choice-chip">Ổ điện</button
+                ><button type="button" class="choice-chip">Bàn laptop</button
+                ><button type="button" class="choice-chip">Ngoài trời</button
+                ><button type="button" class="choice-chip">Gửi xe</button
+                ><button type="button" class="choice-chip">Phòng riêng</button>
+              </div>
+            </div>
+            <div class="filter-section">
+              <strong>Giá/người</strong>
+              <div class="chip-group">
+                <button type="button" class="choice-chip">Dưới 50k</button
+                ><button type="button" class="choice-chip">50–90k</button
+                ><button type="button" class="choice-chip">90–150k</button
+                ><button type="button" class="choice-chip">Trên 150k</button>
+              </div>
+            </div>
+          </details>
+
+          <div class="intent-preview" aria-live="polite">
+            <span class="intent-dot"></span>
+            <p id="intent-copy">Tìm nơi yên, dễ tập trung vào sáng nay</p>
+          </div>
+
+          <button class="primary-action" id="find-places" type="button">
+            Tìm Chốn phù hợp
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="screen"
+        data-screen="results"
+        aria-labelledby="results-title"
+      >
+        <header class="compact-header">
+          <button
+            class="icon-button"
+            type="button"
+            data-go="explore"
+            aria-label="Quay lại"
+          >
+            ←
+          </button>
+          <div>
+            <p class="eyebrow" id="results-context">Làm việc · Sáng nay</p>
+            <h2 id="results-title">Chốn phù hợp</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            data-go="explore"
+            aria-label="Sửa bộ lọc"
+          >
+            ⌘
+          </button>
+        </header>
+
+        <div class="screen-content results-content">
+          <div
+            id="map-view"
+            class="map-view compact-map"
+            aria-label="Bản đồ mô phỏng"
+          >
+            <div class="map-road road-one"></div>
+            <div class="map-road road-two"></div>
+            <div class="map-road road-three"></div>
+            <button
+              class="map-pin pin-one"
+              type="button"
+              data-place="syn_place_001"
+              aria-label="Mở Góc Mây 01"
+            >
+              1
+            </button>
+            <button
+              class="map-pin pin-two"
+              type="button"
+              data-place="syn_place_008"
+              aria-label="Mở Tầng Hai 08"
+            >
+              2
+            </button>
+            <button
+              class="map-pin pin-three"
+              type="button"
+              data-place="syn_place_009"
+              aria-label="Mở Khoảng Lặng 09"
+            >
+              3
+            </button>
+            <span class="map-label label-one">Quận 3</span>
+            <span class="map-label label-two">Bình Thạnh</span>
+            <button class="expand-map" type="button" id="expand-map">
+              Phóng to bản đồ
+            </button>
+          </div>
+          <section class="result-sheet" aria-label="Danh sách kết quả">
+            <div class="sheet-handle"></div>
+            <p class="sheet-count" id="sheet-count">3 Chốn phù hợp</p>
+            <div id="result-list" class="result-list"></div>
+          </section>
+          <div id="empty-state" class="empty-state" hidden>
+            <div class="empty-symbol" aria-hidden="true">⌁</div>
+            <h3>Chưa có Chốn phù hợp</h3>
+            <p>Thử đổi khu vực hoặc chọn khung giờ khác.</p>
+            <button class="secondary-action" type="button" data-go="explore">
+              Sửa lựa chọn
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="screen"
+        data-screen="detail"
+        aria-labelledby="detail-title"
+      >
+        <header class="compact-header detail-header">
+          <button
+            class="icon-button"
+            type="button"
+            data-go="results"
+            aria-label="Quay lại kết quả"
+          >
+            ←
+          </button>
+          <span class="eyebrow">Chi tiết vibe</span>
+          <button
+            class="icon-button save-button"
+            type="button"
+            aria-label="Lưu địa điểm"
+            aria-pressed="false"
+          >
+            ♡
+          </button>
+        </header>
+
+        <div class="place-hero" id="gallery-cover">
+          <div class="hero-pattern" aria-hidden="true"></div>
+          <span class="match-pill" id="detail-match">92% phù hợp</span>
+        </div>
+
+        <div class="gallery-strip" aria-label="Thư viện ảnh mô phỏng">
+          <button
+            type="button"
+            class="gallery-thumb is-selected"
+            data-image="0"
+            aria-label="Xem ảnh cover"
+          ></button>
+          <button
+            type="button"
+            class="gallery-thumb thumb-two"
+            data-image="1"
+            aria-label="Xem ảnh khu trong nhà"
+          ></button>
+          <button
+            type="button"
+            class="gallery-thumb thumb-three"
+            data-image="2"
+            aria-label="Xem ảnh tầng hai"
+          ></button>
+          <button
+            type="button"
+            class="gallery-thumb thumb-four"
+            data-image="3"
+            aria-label="Xem ảnh khu ngoài trời"
+          ></button>
+          <button
+            type="button"
+            class="gallery-thumb thumb-five"
+            data-image="4"
+            aria-label="Xem ảnh bàn ghế"
+          ></button>
+        </div>
+        <p class="media-source">
+          Ảnh mô phỏng · nguồn synthetic · cập nhật 13/08/2026
+        </p>
+
+        <div class="screen-content detail-content">
+          <div class="title-row">
+            <div>
+              <p class="eyebrow" id="detail-district">Quận 3 · 1,2 km</p>
+              <h2 id="detail-title">Góc Mây 01</h2>
+            </div>
+            <span class="open-status">Đang mở</span>
+          </div>
+
+          <div class="confidence-box" id="confidence-box">
+            <strong id="confidence-title">Confidence trung bình</strong>
+            <span id="confidence-copy"
+              >Dựa trên 5 report mô phỏng cùng khung giờ</span
+            >
+          </div>
+
+          <section aria-labelledby="why-heading">
+            <h3 id="why-heading">Vì sao phù hợp?</h3>
+            <ul class="reason-list" id="detail-reasons"></ul>
+          </section>
+
+          <section aria-labelledby="vibe-heading">
+            <div class="section-heading">
+              <h3 id="vibe-heading">Vibe lúc bạn định ghé</h3>
+              <span id="detail-time">09:00</span>
+            </div>
+            <div class="vibe-list" id="vibe-list"></div>
+          </section>
+
+          <p class="data-disclaimer">
+            Dữ liệu trong prototype hoàn toàn mô phỏng, không mô tả địa điểm
+            thật.
+          </p>
+
+          <div class="action-stack">
+            <button
+              class="primary-action"
+              id="start-contribution"
+              type="button"
+            >
+              Góp vibe cho Chốn này
+            </button>
+            <button class="secondary-action" type="button">Mở chỉ đường</button>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="screen"
+        data-screen="contribution"
+        aria-labelledby="contribution-title"
+      >
+        <header class="compact-header">
+          <button
+            class="icon-button"
+            type="button"
+            data-go="detail"
+            aria-label="Quay lại"
+          >
+            ←
+          </button>
+          <div>
+            <p class="eyebrow">Bước <span id="step-number">1</span>/3</p>
+            <h2 id="contribution-title">Bạn vừa ghé khi nào?</h2>
+          </div>
+          <span class="header-spacer"></span>
+        </header>
+
+        <div class="progress-track" aria-hidden="true">
+          <span id="progress-value"></span>
+        </div>
+
+        <form
+          id="contribution-form"
+          class="screen-content contribution-content"
+        >
+          <div class="contribution-step is-active" data-step="1">
+            <div class="selected-place">
+              <span class="place-monogram">C</span>
+              <div>
+                <strong id="contribution-place">Góc Mây 01</strong>
+                <small id="contribution-place-meta">Quận 3</small>
+              </div>
+            </div>
+
+            <label class="control-label" for="contribution-time">
+              Thời điểm ghé
+              <select id="contribution-time">
+                <option value="now">Vừa xong</option>
+                <option value="today">Sớm hơn hôm nay</option>
+                <option value="recent">Trong 7 ngày qua</option>
+              </select>
+            </label>
+
+            <fieldset class="field-group compact-purpose">
+              <legend>Bạn đến để làm gì?</legend>
+              <div class="chip-group" id="visit-mode-group">
+                <button
+                  type="button"
+                  class="choice-chip is-selected"
+                  data-mode="work"
+                  aria-pressed="true"
+                >
+                  Làm việc
+                </button>
+                <button
+                  type="button"
+                  class="choice-chip"
+                  data-mode="solo"
+                  aria-pressed="false"
+                >
+                  Một mình
+                </button>
+                <button
+                  type="button"
+                  class="choice-chip"
+                  data-mode="date"
+                  aria-pressed="false"
+                >
+                  Hẹn hò
+                </button>
+                <button
+                  type="button"
+                  class="choice-chip"
+                  data-mode="study"
+                  aria-pressed="false"
+                >
+                  Học/đọc
+                </button>
+                <button
+                  type="button"
+                  class="choice-chip"
+                  data-mode="friends"
+                  aria-pressed="false"
+                >
+                  Gặp bạn
+                </button>
+                <button
+                  type="button"
+                  class="choice-chip"
+                  data-mode="business_meeting"
+                  aria-pressed="false"
+                >
+                  Họp việc
+                </button>
+                <button
+                  type="button"
+                  class="choice-chip"
+                  data-mode="relax"
+                  aria-pressed="false"
+                >
+                  Thư giãn
+                </button>
+                <button
+                  type="button"
+                  class="choice-chip"
+                  data-mode="late_night"
+                  aria-pressed="false"
+                >
+                  Đi khuya
+                </button>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="contribution-step" data-step="2">
+            <p class="step-intro">Chọn mức gần nhất với trải nghiệm của bạn.</p>
+            <div id="question-list" class="question-list"></div>
+          </div>
+
+          <div class="contribution-step" data-step="3">
+            <label class="control-label" for="contribution-note">
+              Có điều gì nên biết?
+              <textarea
+                id="contribution-note"
+                maxlength="140"
+                rows="5"
+                placeholder="Ví dụ: tầng hai yên hơn khu dưới…"
+              ></textarea>
+            </label>
+            <div class="note-meta">
+              <span>Không bắt buộc</span><span id="note-count">0/140</span>
+            </div>
+            <div class="simulation-notice">
+              <strong>Đây là prototype</strong>
+              <span>Report sẽ không được lưu hoặc gửi đi.</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              class="secondary-action"
+              id="previous-step"
+              type="button"
+              hidden
+            >
+              Quay lại
+            </button>
+            <button class="primary-action" id="next-step" type="button">
+              Tiếp tục
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section
+        class="screen success-screen"
+        data-screen="success"
+        aria-labelledby="success-title"
+      >
+        <div class="success-content">
+          <div class="success-mark" aria-hidden="true">✓</div>
+          <p class="eyebrow">Report mô phỏng</p>
+          <h2 id="success-title">Cảm ơn bạn đã góp vibe</h2>
+          <p>
+            Trong sản phẩm thật, đóng góp sẽ được kiểm tra trước khi cập nhật
+            snapshot.
+          </p>
+          <button class="primary-action" type="button" data-go="explore">
+            Về trang khám phá
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

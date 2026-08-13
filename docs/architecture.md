@@ -4,7 +4,7 @@
 
 - Web/PWA: Next.js + TypeScript.
 - UI: Tailwind CSS + component primitives có accessibility.
-- Map: MapLibre GL JS.
+- Map: MapLibre GL JS + MapTiler Cloud tile/style.
 - Database: PostgreSQL + PostGIS.
 - ORM: Drizzle ORM.
 - Authentication: Auth.js hoặc nhà cung cấp tương đương.
@@ -13,7 +13,7 @@
 - Hosting ban đầu: Vercel/Cloudflare cho web; managed PostgreSQL có PostGIS.
 - Analytics: công cụ event analytics tôn trọng privacy.
 
-Quyết định nhà cung cấp bản đồ tile, auth, database và hosting chỉ chốt sau một spike ngắn về giá, điều khoản và độ phủ Việt Nam.
+Provider architecture đã chốt trong `PROVIDER-SPIKE.md`: FSQ OS Places cho POI snapshot/delta, MapTiler Cloud cho tile/style và geocoding; Geoapify là fallback. Auth, database hosting và web hosting vendor vẫn chờ spike riêng.
 
 ## 2. Các module
 
@@ -27,6 +27,7 @@ Web/PWA
         │
 Application layer
   ├── Place search
+  ├── Provider signal normalization
   ├── Vibe aggregation
   ├── Explainable ranking
   ├── Moderation
@@ -34,6 +35,8 @@ Application layer
         │
 PostgreSQL + PostGIS
   ├── POI data
+  ├── Service areas và versioned boundaries
+  ├── Provider vibe signals
   ├── Raw vibe reports
   ├── Aggregated snapshots
   └── Users and collections
@@ -43,13 +46,42 @@ MVP nên là modular monolith. Chưa cần microservices, queue riêng hoặc ve
 
 ## 3. Data model đề xuất
 
+### `service_areas`
+
+- `id`: UUID; `code` bất biến như `hcm-q1`.
+- `display_name`, `area_type`, `timezone`, `priority`.
+- `status`: draft, active, paused, archived.
+- `parent_id`: nullable, dành cho khu vực lồng nhau về sau.
+- timestamps.
+
+### `service_area_boundaries`
+
+- `id`, `service_area_id`, `version`.
+- `boundary`: PostGIS `geometry(MultiPolygon, 4326)` với GiST index.
+- `source_storage_key`: object key của GeoJSON nguồn bất biến.
+- `source_name`, `source_relation_id`, `source_url`, `source_license`.
+- `retrieved_at`, `checksum`, `is_current`, timestamps.
+- Unique key: service area + version; chỉ một current version cho mỗi service area.
+
+GeoJSON nguồn được lưu trong S3-compatible object storage, không nằm trong repository. Runtime chỉ query geometry đã validate/simplify trong PostGIS. Cập nhật ranh giới luôn tạo version mới để có thể audit và rollback bằng cách chuyển current version, không ghi đè source object.
+
+### `place_service_areas`
+
+- `place_id`, `service_area_id`.
+- `is_primary`, `assigned_at`, `boundary_version`.
+- Unique key: place + service area.
+
+Importer gán POI vào khu vực bằng `ST_Covers(boundary, place.location)`. Khi active boundary version mới, importer phải tính lại membership liên quan trong cùng workflow. Trường `district` của provider chỉ là metadata hiển thị, không quyết định membership.
+
 ### `places`
 
 - `id`: UUID.
 - `name`, `slug`, `description`.
-- `location`: PostGIS geography point.
+- `location`: PostGIS `geometry(Point, 4326)`; cast sang geography khi tính khoảng cách theo mét.
 - `address`, `district`.
 - `price_level`.
+- `typical_spend_min`, `typical_spend_max`, `currency`.
+- `size_category`, `estimated_capacity`.
 - `opening_hours`: structured JSON.
 - `status`: draft, published, archived.
 - timestamps.
@@ -63,6 +95,22 @@ MVP nên là modular monolith. Chưa cần microservices, queue riêng hoặc ve
 - `raw_data`: chỉ lưu khi điều khoản provider cho phép.
 - Unique key: provider + provider place ID.
 
+### `provider_vibe_signals`
+
+Tín hiệu vibe lấy từ provider được lưu tách khỏi report do con người gửi trên Chốn:
+
+- `id`, `place_id`, `place_source_id`.
+- `provider_product`, `signal_type`, `provider_signal_id`.
+- `signal_value`: dữ liệu chuẩn hóa khi được phép cache/persist; `raw_data` chỉ có khi hợp đồng cho phép persist.
+- Sáu cột estimate `noise`, `crowd`, `lighting`, `privacy`, `workability`, `social_energy` theo thang 1–5, kèm `mapping_version`.
+- `day_type`, `time_bucket`: nullable; chỉ điền khi chính tín hiệu provider có ngữ cảnh thời gian tương ứng.
+- `retrieved_at`, `observed_at`, `expires_at`.
+- `source_url`, `attribution_text`, `storage_policy` và `confidence_score`.
+- Unique key theo provider/source signal để sync idempotent.
+
+Provider signal không có `data_type` và không được chèn vào `vibe_reports`. Bốn `data_type` hiện tại vì vậy không thay đổi.
+Với `storage_policy=reference_only`, database chỉ giữ ID/provenance cần thiết; signal content và sáu dimension score không được persist.
+
 ### `place_areas`
 
 Khu vực bên trong một địa điểm có vibe khác nhau:
@@ -70,6 +118,21 @@ Khu vực bên trong một địa điểm có vibe khác nhau:
 - `id`, `place_id`.
 - `name`: tầng 2, sân vườn, khu trong nhà.
 - `description`.
+
+### `place_amenities`
+
+- `place_id`, `amenity_key`, `availability`.
+- `source_type`, `verified_at`.
+- `unknown` được lưu riêng, không đồng nghĩa `no`.
+
+### `place_media`
+
+- `id`, `place_id`, `place_area_id`.
+- `storage_key` hoặc provider `source_url` theo terms.
+- `width`, `height`, `alt_text`, `sort_order`.
+- `source_type`, `source_reference`, `rights_status`.
+- `captured_at`, `uploaded_by`, `moderation_status`, `is_simulated`.
+- Tối đa 5 ảnh active trong gallery MVP; ảnh thứ tự 0 là cover.
 
 ### `vibe_reports`
 
@@ -93,6 +156,7 @@ Dữ liệu tổng hợp phục vụ query nhanh:
 - `time_bucket`: morning, midday, afternoon, evening, late.
 - Median/weighted mean cho từng chiều.
 - `report_count`, `confidence_score`, `last_report_at`.
+- Lưu riêng contribution component và provider component; API mới áp dụng fusion policy khi trả kết quả, không làm mất provenance.
 - Unique key: place + area + day type + time bucket.
 
 ### `collections` và `collection_places`
@@ -138,7 +202,9 @@ Luôn hiển thị số report và thời điểm cập nhật gần nhất cạ
 
 ```text
 GET  /api/places?bbox=&purpose=&at=&filters=
+GET  /api/service-areas?status=active
 GET  /api/places/:slug
+GET  /api/places/:id/media
 POST /api/vibe-reports
 GET  /api/places/:id/vibe?at=
 POST /api/collections
@@ -160,12 +226,15 @@ MVP không có Admin API/UI. Import và thao tác vận hành dùng script có q
 
 ## 8. Chiến lược dữ liệu ban đầu
 
-1. Import POI cơ bản từ provider bên thứ ba có giấy phép phù hợp.
-2. Founder/curator xác minh tên, vị trí, giờ mở cửa và trạng thái hoạt động trong file CSV.
-3. Chạy validation/dry-run, sau đó import CSV bằng script có khả năng upsert an toàn.
-4. Nhóm dự án curate vibe seed và ghi rõ `data_type=editorial`.
-5. Thu vibe cộng đồng trực tiếp từ contribution flow trên web/PWA Chốn.
-6. Chỉ sinh snapshot khi đủ dữ liệu; nếu thiếu, hiển thị editorial note và confidence thấp.
+1. Import GeoJSON ranh giới OSM vào object storage và PostGIS qua boundary importer có version/dry-run.
+2. Import POI cơ bản từ provider bên thứ ba có giấy phép phù hợp.
+3. Lọc/gán POI vào `service_area` bằng spatial query, không tin chuỗi district từ provider.
+4. Founder/curator xác minh tên, vị trí, giờ mở cửa và trạng thái hoạt động trong file CSV.
+5. Chạy validation/dry-run, sau đó import CSV bằng script có khả năng upsert an toàn.
+6. Đồng bộ provider vibe signals qua adapter riêng sau terms/coverage gate; không đưa review text trực tiếp vào `vibe_reports`.
+7. Nhóm dự án curate vibe seed và ghi rõ `data_type=editorial`.
+8. Thu vibe cộng đồng trực tiếp từ contribution flow trên web/PWA Chốn.
+9. Sinh snapshot với provenance tách biệt; khi thiếu contribution có thể dùng provider signal với nhãn và confidence phù hợp.
 
 ### CSV seed contract tối thiểu
 
@@ -189,6 +258,7 @@ Importer phải validate toàn bộ file trước khi ghi, hỗ trợ `--dry-run
 Ràng buộc bắt buộc:
 
 - Production importer và database constraint/application guard từ chối `synthetic` và `research`.
+- Production importer từ chối mọi record có `is_simulated=true`, kể cả fixture mô phỏng `editorial` hoặc `community`.
 - Synthetic fixtures có ID/prefix nhận diện rõ và không dùng chung artifact import production.
 - Research data chỉ được chuyển sang production qua một thao tác xác minh riêng, có consent và audit; kết quả phải mang nhãn `editorial` hoặc `community` phù hợp.
 - Không đổi nhãn tự động để vượt qua rào chắn môi trường.
@@ -199,9 +269,10 @@ Ràng buộc bắt buộc:
 - Founder hoặc curator được chỉ định chuẩn bị và review CSV.
 - Người vận hành được cấp quyền chạy import/operations script.
 - Người dùng gửi vibe report trên Chốn.
+- Provider sync job chỉ ghi `provider_vibe_signals` theo field/storage allowlist của từng hợp đồng.
 - Chủ địa điểm chưa có quyền tự sửa dữ liệu hoặc vibe score.
 
-Không scrape review/ảnh từ nền tảng khác nếu chưa có quyền sử dụng và lưu trữ.
+Không scrape review/ảnh từ nền tảng khác. API content chỉ được lưu, biến đổi và hiển thị khi điều khoản tương ứng cho phép và attribution đầy đủ.
 
 ## 9. Testing tối thiểu
 
@@ -209,6 +280,7 @@ Không scrape review/ảnh từ nền tảng khác nếu chưa có quyền sử 
 - Integration test cho geospatial query và permissions.
 - Test importer với file hợp lệ, sai schema, record trùng và dry-run.
 - Test production guard từ chối synthetic/research và không ghi một phần dữ liệu.
+- Test production guard từ chối mọi record có `is_simulated=true`.
 - E2E cho khám phá, xem địa điểm và đóng góp.
 - Accessibility test cho filter, modal và map fallback dạng danh sách.
 - Kiểm tra mobile performance với dataset ít nhất 1.000 marker giả lập.

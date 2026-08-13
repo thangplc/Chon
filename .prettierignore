@@ -1,0 +1,10 @@
+.agents/
+.next/
+coverage/
+data/
+docs/
+drizzle/meta/
+node_modules/
+prototype/
+*.md
+pnpm-lock.yaml
