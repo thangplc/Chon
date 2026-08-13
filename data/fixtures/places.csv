@@ -1,0 +1,13 @@
+internal_id,name,address,latitude,longitude,district,status,is_simulated
+syn_place_001,Góc Mây 01,Địa chỉ hư cấu 01,10.7801,106.6871,Quận 3,published,true
+syn_place_002,Hiên Nắng 02,Địa chỉ hư cấu 02,10.7842,106.6902,Quận 3,published,true
+syn_place_003,Nếp Nhỏ 03,Địa chỉ hư cấu 03,10.7893,106.6953,Quận 3,published,true
+syn_place_004,Trạm Chậm 04,Địa chỉ hư cấu 04,10.7754,106.6994,Quận 1,published,true
+syn_place_005,Đèn Vàng 05,Địa chỉ hư cấu 05,10.7715,106.7035,Quận 1,published,true
+syn_place_006,Sân Gió 06,Địa chỉ hư cấu 06,10.7686,106.7066,Quận 1,published,true
+syn_place_007,Bờ Lá 07,Địa chỉ hư cấu 07,10.8017,106.7107,Bình Thạnh,published,true
+syn_place_008,Tầng Hai 08,Địa chỉ hư cấu 08,10.8058,106.7148,Bình Thạnh,published,true
+syn_place_009,Khoảng Lặng 09,Địa chỉ hư cấu 09,10.8099,106.7189,Bình Thạnh,published,true
+syn_place_010,Nhịp Phố 10,Địa chỉ hư cấu 10,10.7950,106.7000,Bình Thạnh,published,true
+syn_place_011,Mưa Thềm 11,Địa chỉ hư cấu 11,10.7861,106.7011,Quận 3,draft,true
+syn_place_012,Hẻm Sáng 12,Địa chỉ hư cấu 12,10.7732,106.6972,Quận 1,archived,true

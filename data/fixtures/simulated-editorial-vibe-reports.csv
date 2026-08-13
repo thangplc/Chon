@@ -1,0 +1,5 @@
+report_id,place_id,visited_at,visit_mode,noise,crowd,lighting,privacy,workability,social_energy,seat_availability,location_verification,data_type,is_simulated,verified_by,verified_at,moderation_status,source_note
+sim_editorial_001,syn_place_002,2026-08-02T08:00:00+07:00,work,1,1,2,3,5,1,easy,verified,editorial,true,fixture_curator,2026-08-02T09:00:00+07:00,approved,Mô phỏng editorial đã xác minh
+sim_editorial_002,syn_place_005,2026-08-02T19:30:00+07:00,date,3,4,5,4,1,4,difficult,verified,editorial,true,fixture_curator,2026-08-02T21:00:00+07:00,approved,Mô phỏng editorial buổi tối
+sim_editorial_003,syn_place_008,2026-08-03T14:00:00+07:00,work,1,2,2,5,5,1,normal,verified,editorial,true,fixture_curator,2026-08-03T16:00:00+07:00,approved,Mô phỏng khu vực làm việc tốt
+sim_editorial_004,syn_place_012,2026-08-03T10:00:00+07:00,solo,2,1,1,3,4,1,easy,verified,editorial,true,fixture_curator,2026-08-03T12:00:00+07:00,archived,Mô phỏng địa điểm đã đóng cửa

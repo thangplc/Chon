@@ -1,0 +1,5 @@
+report_id,place_id,visited_at,visit_mode,noise,crowd,lighting,privacy,workability,social_energy,seat_availability,location_verification,data_type,is_simulated,consent_recorded,moderation_status,source_note
+sim_research_001,syn_place_001,2026-07-20T09:00:00+07:00,work,2,2,2,3,5,1,easy,recalled,research,true,false,pending,Mô phỏng câu trả lời hồi tưởng của người tham gia
+sim_research_002,syn_place_003,2026-07-25T19:00:00+07:00,date,2,3,5,4,1,2,normal,recalled,research,true,false,pending,Mô phỏng dữ liệu research cho prototype
+sim_research_003,syn_place_007,2026-07-28T15:30:00+07:00,solo,3,2,1,3,3,2,easy,recalled,research,true,false,pending,Không phải trải nghiệm thật
+sim_research_004,syn_place_010,2026-08-01T20:00:00+07:00,friends,5,5,4,1,1,5,difficult,recalled,research,true,false,pending,Chỉ dùng test research workflow

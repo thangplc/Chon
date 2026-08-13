@@ -1,0 +1,13 @@
+report_id,place_id,visited_at,day_type,time_bucket,visit_mode,noise,crowd,lighting,privacy,workability,social_energy,seat_availability,location_verification,data_type,is_simulated,moderation_status,short_note
+syn_report_001,syn_place_001,2026-08-03T08:30:00+07:00,weekday,morning,work,1,1,2,4,5,1,easy,none,synthetic,true,approved,Yên và phù hợp để test use case làm việc
+syn_report_002,syn_place_001,2026-08-03T19:30:00+07:00,weekday,evening,date,4,4,4,3,1,4,difficult,none,synthetic,true,approved,Mô phỏng quán thay đổi mạnh vào buổi tối
+syn_report_003,syn_place_002,2026-08-08T15:00:00+07:00,weekend,afternoon,solo,2,3,2,3,4,2,normal,none,synthetic,true,approved,Mô phỏng trải nghiệm cân bằng
+syn_report_004,syn_place_003,2026-08-08T20:00:00+07:00,weekend,evening,date,2,2,5,5,1,2,easy,none,synthetic,true,approved,Ánh sáng ấm và riêng tư
+syn_report_005,syn_place_004,2026-08-04T09:00:00+07:00,weekday,morning,work,3,2,1,2,4,3,easy,none,synthetic,true,approved,Đủ sáng nhưng riêng tư thấp
+syn_report_006,syn_place_005,2026-08-09T19:00:00+07:00,weekend,evening,date,3,5,5,3,1,5,difficult,none,synthetic,true,approved,Mô phỏng địa điểm nổi tiếng và rất đông
+syn_report_007,syn_place_006,2026-08-05T16:00:00+07:00,weekday,afternoon,solo,2,2,1,2,3,2,easy,none,synthetic,true,approved,Khu ngoài trời thoáng
+syn_report_008,syn_place_007,2026-08-06T22:30:00+07:00,weekday,late,solo,2,1,4,4,2,1,easy,none,synthetic,true,approved,Mô phỏng nơi mở muộn và vắng
+syn_report_009,syn_place_008,2026-08-07T14:30:00+07:00,friday,afternoon,work,1,2,2,5,5,1,normal,none,synthetic,true,approved,Tầng hai yên và có tính riêng tư
+syn_report_010,syn_place_009,2026-08-09T10:00:00+07:00,weekend,morning,solo,1,1,2,5,4,1,easy,none,synthetic,true,approved,Mô phỏng confidence thấp chỉ có một report
+syn_report_011,syn_place_010,2026-08-07T20:30:00+07:00,friday,evening,friends,5,5,4,1,1,5,difficult,none,synthetic,true,approved,Rất ồn và sôi động
+syn_report_012,syn_place_011,2026-08-10T09:30:00+07:00,weekday,morning,work,2,2,2,3,4,2,normal,none,synthetic,true,pending,Report chờ moderation
