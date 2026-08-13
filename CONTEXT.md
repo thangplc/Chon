@@ -75,14 +75,33 @@ Chốn chốt bốn loại dữ liệu nghiệp vụ:
 | `editorial` | Nhóm Chốn xác minh và curate | Production |
 | `community` | Người dùng đóng góp trên Chốn | Production |
 
-`data_type` mô tả mức độ và mục đích sử dụng dữ liệu. Nguồn POI bên thứ ba được quản lý riêng bằng provenance/provider mapping, không phải loại dữ liệu thứ năm.
+`data_type` mô tả mức độ và mục đích sử dụng các report do Chốn tạo hoặc thu trực tiếp. POI và tín hiệu vibe bên thứ ba được quản lý riêng bằng provenance/provider mapping, không phải loại dữ liệu thứ năm.
+
+Mô hình đã chốt:
+
+```text
+POI bên thứ ba  → provider provenance → canonical place
+Vibe bên thứ ba → provider provenance → provider vibe signal
+Dữ liệu Chốn    → data_type           → vibe report/amenities/media
+```
 
 ### POI từ bên thứ ba
 
 - Tên, địa chỉ, tọa độ, loại địa điểm, giờ mở cửa và thông tin liên hệ.
-- Nguồn cụ thể được chốt sau data-provider spike.
+- Provider architecture đã chốt trong Sprint 1: FSQ OS Places cho POI snapshot/delta, MapTiler cho tile/geocoding và Geoapify làm fallback; production vẫn cần credential coverage smoke test.
+- Ranh giới `service_area` lấy từ OpenStreetMap: bản GeoJSON nguồn được version hóa trong S3-compatible object storage; bản đã validate/simplify được lưu trong PostGIS để query runtime.
 - Dữ liệu được import/đồng bộ vào database theo điều khoản của provider.
 - Chốn dùng ID nội bộ; ID của provider chỉ dùng để mapping nguồn.
+
+### Tín hiệu vibe từ bên thứ ba
+
+- Kết hợp bốn provider candidate: Foursquare Places Pro/Premium, Google Places, Yelp và Tripadvisor.
+- Chỉ tích hợp qua API/dataset hoặc thỏa thuận cấp phép chính thức; không scrape review, ảnh hoặc nội dung hiển thị công khai.
+- Các nguồn này cung cấp tín hiệu bổ trợ như rating, review/review summary, tips/tastes, popular hours, popularity, price, amenities và ảnh; không được xem là một `vibe_report` do người dùng Chốn trực tiếp ghi nhận.
+- Tín hiệu được chuẩn hóa vào kho riêng, gắn provider, provider place ID, thời gian lấy, phạm vi thời gian nếu có, attribution, chính sách lưu trữ và confidence.
+- Tín hiệu không có thời điểm trải nghiệm chỉ được dùng như đặc trưng tổng quát. Không tự gán vào `day_type`/`time_bucket` cụ thể.
+- Provider signal dùng để cold-start, bổ trợ giải thích và giảm khoảng trống dữ liệu; không ghi đè report `editorial` hoặc `community` đã xác minh.
+- Mỗi adapter chỉ được bật sau khi vượt qua gate về credential, coverage TP.HCM, chi phí, attribution và quyền lưu/biến đổi dữ liệu.
 
 ### Seed thủ công
 
@@ -101,7 +120,7 @@ Chốn chốt bốn loại dữ liệu nghiệp vụ:
 ### Vibe cộng đồng
 
 - Thu trực tiếp từ người dùng trên web/PWA Chốn chuẩn bị xây.
-- Không nhập review cộng đồng từ Google Maps, TikTok hoặc nền tảng khác.
+- Review/tín hiệu từ nền tảng khác không được gắn nhãn `community`; chúng chỉ đi qua pipeline provider riêng khi có quyền sử dụng.
 - Report gắn với địa điểm, thời điểm ghé, khung giờ và mức xác minh vị trí.
 - Đây là dữ liệu first-party do Chốn thu thập và quản lý theo chính sách riêng tư của sản phẩm.
 
@@ -109,8 +128,9 @@ Chốn chốt bốn loại dữ liệu nghiệp vụ:
 
 - Thành phố: TP.HCM.
 - Khu vực đề xuất: Quận 1, Quận 3, Bình Thạnh.
+- Ba khu vực là các bản ghi cấu hình trong `service_areas`, không hard-code vào business logic; mở rộng bằng boundary version mới và kích hoạt trong database.
 - Loại địa điểm: quán cà phê.
-- Use case: làm việc, đi một mình, hẹn hò.
+- Use case: làm việc, học/đọc, đi một mình, hẹn hò, gặp bạn bè, họp công việc, thư giãn và đi khuya.
 - Quy mô dữ liệu: 50–100 địa điểm curate.
 - Nền tảng: responsive web/PWA.
 
@@ -118,12 +138,13 @@ Chốn chốt bốn loại dữ liệu nghiệp vụ:
 
 - Một developer, cần giữ kiến trúc đơn giản.
 - Cold start dữ liệu là rủi ro lớn hơn độ khó kỹ thuật.
-- Không phụ thuộc vào việc scrape review hoặc ảnh không có quyền sử dụng.
+- Không phụ thuộc vào việc scrape review hoặc ảnh không có quyền sử dụng; thiếu một provider vibe không được làm hỏng core flow.
 - Seed MVP chỉ được cập nhật qua file CSV và import script có kiểm tra; Admin Dashboard được hoãn sang giai đoạn sau.
 - Local, CI và staging phải tách biệt với production; production importer phải từ chối `data_type=synthetic` và `data_type=research`.
 - Không thu thập lịch sử vị trí liên tục.
 - Không bán thứ hạng hoặc vibe score.
 - Chưa mở rộng địa lý trước khi dữ liệu tại khu vực thử nghiệm đủ sâu.
+- Các hoạt động collect/phỏng vấn/usability test đang được hoãn. Dự án có thể tiếp tục technical prototype nhưng chưa được xem là đã product validation.
 
 ## 10. Tiêu chí chứng minh ý tưởng
 

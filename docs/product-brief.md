@@ -23,11 +23,16 @@ Nếu mô tả không khí địa điểm bằng dữ liệu có cấu trúc the
 - Dùng Google Maps nhưng phải đọc ảnh và review để đoán không khí.
 - Sẵn sàng chia sẻ đánh giá rất ngắn sau khi ghé quán.
 
-### Ba job-to-be-done của MVP
+### Tám job-to-be-done của MVP
 
 1. Tìm nơi làm việc phù hợp trong một khung giờ cụ thể.
-2. Tìm nơi thoải mái để đi một mình.
-3. Tìm địa điểm hẹn hò đúng mức riêng tư và năng lượng mong muốn.
+2. Tìm nơi học hoặc đọc sách ít phân tâm.
+3. Tìm nơi thoải mái để đi một mình.
+4. Tìm địa điểm hẹn hò đúng mức riêng tư.
+5. Tìm nơi gặp bạn bè có bàn nhóm và sức sống phù hợp.
+6. Tìm nơi họp công việc đủ yên và riêng tư.
+7. Tìm nơi thư giãn với nhịp không gian chậm.
+8. Tìm địa điểm mở khuya và phù hợp tại đúng thời điểm.
 
 ## 4. Giá trị khác biệt
 
@@ -46,10 +51,13 @@ Khác biệt cốt lõi:
 ### Must have
 
 - Xem bản đồ và danh sách địa điểm.
-- Chọn vị trí, bán kính và thời gian dự định ghé.
-- Chọn một trong ba mục đích: làm việc, đi một mình, hẹn hò.
-- Lọc theo độ ồn, độ đông, ánh sáng, riêng tư, giá và giờ mở cửa.
+- Chọn khu vực bằng vị trí hiện tại, tìm kiếm, quận nhanh hoặc map picker kèm bán kính.
+- Chọn preset thời gian hoặc ngày/giờ chính xác; thời lượng ngồi là tùy chọn.
+- Chọn một trong tám mục đích đã chốt.
+- Lọc theo vibe, quy mô không gian, tiện ích, phân khúc/khoảng giá và giờ mở cửa.
+- Xem kết quả bằng map phía trên + list bottom sheet trên mobile; split view trên desktop.
 - Xem trang chi tiết địa điểm và vibe theo khung giờ.
+- Xem cover và gallery tối đa 5 ảnh kèm nguồn ảnh.
 - Lưu địa điểm vào collection.
 - Gửi vibe report trong tối đa 10 giây.
 - Đăng nhập bằng magic link hoặc OAuth.
@@ -97,7 +105,7 @@ Không mở taxonomy tùy ý trong MVP. Thay đổi taxonomy được quản lý
 
 ## 7. Nguồn dữ liệu
 
-POI nền đến từ bên thứ ba có điều khoản phù hợp thông qua API/import job. Với dữ liệu nghiệp vụ, Chốn sử dụng taxonomy sau:
+POI nền đến từ FSQ OS Places qua snapshot/delta import; MapTiler cung cấp tile/geocoding và Geoapify là fallback. Vibe sử dụng mô hình hybrid: đóng góp trực tiếp trên Chốn là report có `data_type`, còn Foursquare Places Pro/Premium, Google Places, Yelp và Tripadvisor cung cấp provider signals tách provenance để cold-start/bổ trợ. Chi tiết field allowlist và production gate nằm trong `PROVIDER-SPIKE.md`. Với dữ liệu nghiệp vụ do Chốn tạo/thu trực tiếp, Chốn sử dụng taxonomy sau:
 
 | Data type | Mục đích | Được dùng ở đâu |
 |---|---|---|
@@ -107,6 +115,8 @@ POI nền đến từ bên thứ ba có điều khoản phù hợp thông qua AP
 | `community` | Người dùng đóng góp trên Chốn | Production |
 
 Không trình bày dữ liệu editorial như dữ liệu cộng đồng. UI phải hiển thị provenance và confidence phù hợp.
+
+Provider signal không phải `data_type`, không được trình bày như report của người dùng Chốn và không được gán vào khung giờ khi nguồn không có ngữ cảnh thời gian.
 
 Synthetic data không được dùng làm bằng chứng product validation. Research data không được đưa thẳng lên production; chỉ được chuyển thành `editorial` hoặc `community` khi có consent, provenance và xác minh phù hợp.
 
