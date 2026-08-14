@@ -2,7 +2,7 @@
 
 Trạng thái: **cutover và workspace extraction hoàn thành 2026-08-14**.
 
-Sprint 3 vẫn tạm dừng sau khi tách backend để review lại scope trên kiến trúc
+Sprint 3 đã tiếp tục sau khi tách backend; scope còn lại được review trên kiến trúc
 mới. Không tự động tiếp tục feature chỉ vì cutover gate đã hoàn tất.
 
 ## Quyết định
@@ -96,5 +96,5 @@ Migration chỉ được coi là hoàn tất khi:
 - HTTP smoke pass cho health, spatial places, Explore, Place Detail, Next proxy
   và hai Next page routes.
 
-Cutover gate đã pass. Bước tiếp theo là review lại Sprint 3; roadmap không tự
+Cutover gate đã pass. Sprint 3 tiếp tục theo từng task được review; roadmap không tự
 động tiếp tục và có thể thay đổi theo hoàn cảnh sản phẩm/kỹ thuật lúc đó.

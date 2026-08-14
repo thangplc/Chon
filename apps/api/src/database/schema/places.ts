@@ -13,11 +13,10 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import type { PlaceOpeningHours } from "../../../../../packages/domain/src/place-detail/place-detail";
 
 import { placeStatusEnum, sizeCategoryEnum } from "./enums";
 import { geometryPoint4326 } from "./postgis";
-
-export type OpeningHours = Readonly<Record<string, unknown>>;
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -47,7 +46,7 @@ export const places = pgTable(
       .default("unknown")
       .notNull(),
     estimatedCapacity: integer("estimated_capacity"),
-    openingHours: jsonb("opening_hours").$type<OpeningHours>(),
+    openingHours: jsonb("opening_hours").$type<PlaceOpeningHours>(),
     status: placeStatusEnum("status").default("draft").notNull(),
     isSimulated: boolean("is_simulated").default(false).notNull(),
     ...timestamps,

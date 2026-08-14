@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
   mediaSourceLabel,
+  parsePlaceOpeningHours,
+  parsePriceLevel,
   type PlaceDetail,
   resolvePlaceMediaUrl,
 } from "../../../../packages/domain/src/place-detail/place-detail";
@@ -15,7 +17,7 @@ import {
   executeSpatialPlaceQuery,
   type SpatialPlacePage,
 } from "../database/queries/spatial-place-query";
-import { placeMedia, places } from "../database/schema";
+import { placeAreas, placeMedia, places } from "../database/schema";
 
 const simulatedEnvironments = new Set(["local", "ci", "staging"]);
 
@@ -37,13 +39,20 @@ export class PlacesService {
     const [place] = await this.db
       .select({
         address: places.address,
+        currency: places.currency,
         description: places.description,
         district: places.district,
+        estimatedCapacity: places.estimatedCapacity,
         id: places.id,
         isSimulated: places.isSimulated,
         location: places.location,
         name: places.name,
+        openingHours: places.openingHours,
+        priceLevel: places.priceLevel,
+        sizeCategory: places.sizeCategory,
         slug: places.slug,
+        typicalSpendMax: places.typicalSpendMax,
+        typicalSpendMin: places.typicalSpendMin,
       })
       .from(places)
       .where(and(eq(places.slug, slug), eq(places.status, "published")))
@@ -55,6 +64,23 @@ export class PlacesService {
     ) {
       return null;
     }
+
+    const areaRows = await this.db
+      .select({
+        description: placeAreas.description,
+        id: placeAreas.id,
+        isSimulated: placeAreas.isSimulated,
+        name: placeAreas.name,
+      })
+      .from(placeAreas)
+      .where(
+        and(
+          eq(placeAreas.placeId, place.id),
+          eq(placeAreas.isSimulated, place.isSimulated),
+        ),
+      )
+      .orderBy(asc(placeAreas.name))
+      .limit(20);
 
     const mediaRows = await this.db
       .select({
@@ -83,8 +109,11 @@ export class PlacesService {
 
     return {
       address: place.address,
+      areas: areaRows,
+      currency: place.currency,
       description: place.description,
       district: place.district,
+      estimatedCapacity: place.estimatedCapacity,
       id: place.id,
       isSimulated: place.isSimulated,
       latitude: place.location.latitude,
@@ -101,7 +130,14 @@ export class PlacesService {
         width: media.width,
       })),
       name: place.name,
+      openingHours: place.openingHours
+        ? parsePlaceOpeningHours(place.openingHours)
+        : null,
+      priceLevel: parsePriceLevel(place.priceLevel),
+      sizeCategory: place.sizeCategory,
       slug: place.slug,
+      typicalSpendMax: place.typicalSpendMax,
+      typicalSpendMin: place.typicalSpendMin,
     };
   }
 }

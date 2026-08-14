@@ -37,6 +37,56 @@ describe("data import validation", () => {
       is_simulated: true,
       size_category: "unknown",
     });
+    expect(rows[0].providedMutableFields).toEqual([]);
+  });
+
+  it("parses a complete weekly opening-hours object", () => {
+    const periods = [{ closes: "22:00", opens: "07:00" }];
+    const rows = validatePlaces(
+      parsed({
+        address: "1 Test Street",
+        district: "Quận 1",
+        internal_id: "syn_test_place",
+        is_simulated: "true",
+        latitude: "10.78",
+        longitude: "106.7",
+        name: "Test Cafe",
+        opening_hours: JSON.stringify({
+          timezone: "Asia/Ho_Chi_Minh",
+          weekly: {
+            friday: periods,
+            monday: periods,
+            saturday: periods,
+            sunday: [],
+            thursday: periods,
+            tuesday: periods,
+            wednesday: periods,
+          },
+        }),
+        status: "published",
+      }),
+    );
+
+    expect(rows[0].opening_hours?.weekly.sunday).toEqual([]);
+    expect(rows[0].providedMutableFields).toEqual(["opening_hours"]);
+  });
+
+  it("rejects malformed opening-hours JSON", () => {
+    expect(() =>
+      validatePlaces(
+        parsed({
+          address: "1 Test Street",
+          district: "Quận 1",
+          internal_id: "syn_test_place",
+          is_simulated: "true",
+          latitude: "10.78",
+          longitude: "106.7",
+          name: "Test Cafe",
+          opening_hours: '{"timezone":"Asia/Ho_Chi_Minh"}',
+          status: "published",
+        }),
+      ),
+    ).toThrow(ImportError);
   });
 
   it("allows a simulated research fixture", () => {

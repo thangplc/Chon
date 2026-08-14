@@ -1,7 +1,12 @@
+import {
+  openingHoursAreEqual,
+  type PlaceOpeningHours,
+} from "../../../../../packages/domain/src/place-detail/place-detail";
+
 import type { ImportDatabaseClient } from "./database";
 import type { SummaryDraft } from "./summary";
 import type { ImportIssue } from "./types";
-import type { PlaceInput } from "./validation";
+import type { PlaceInput, PlaceMutableField } from "./validation";
 
 type ExistingPlace = Readonly<{
   address: string;
@@ -14,6 +19,7 @@ type ExistingPlace = Readonly<{
   latitude: number;
   longitude: number;
   name: string;
+  openingHours: PlaceOpeningHours | null;
   priceLevel: number | null;
   sizeCategory: string;
   slug: string;
@@ -34,6 +40,7 @@ export type PlannedPlace = Readonly<{
 export type PlacePlan = Readonly<{
   create: readonly PlannedPlace[];
   existingIds: ReadonlyMap<string, string>;
+  update: readonly Readonly<{ id: string; input: PlaceInput }>[];
 }>;
 
 function normalizeName(value: string): string {
@@ -88,7 +95,7 @@ function namesAreSimilar(left: string, right: string): boolean {
   );
 }
 
-function placeIsUnchanged(
+function immutablePlaceFieldsMatch(
   existing: ExistingPlace,
   input: PlaceInput,
   slug: string,
@@ -101,13 +108,40 @@ function placeIsUnchanged(
     coordinatesAreEqual(existing.latitude, input.latitude) &&
     coordinatesAreEqual(existing.longitude, input.longitude) &&
     existing.status === input.status &&
-    existing.isSimulated === input.is_simulated &&
-    existing.sizeCategory === input.size_category &&
-    existing.estimatedCapacity === (input.estimated_capacity ?? null) &&
-    existing.priceLevel === (input.price_level ?? null) &&
-    existing.typicalSpendMin === (input.typical_spend_min ?? null) &&
-    existing.typicalSpendMax === (input.typical_spend_max ?? null) &&
-    existing.currency === input.currency
+    existing.isSimulated === input.is_simulated
+  );
+}
+
+function mutablePlaceFieldsMatch(
+  existing: ExistingPlace,
+  input: PlaceInput,
+): boolean {
+  const matches = (field: PlaceMutableField, valueMatches: boolean) =>
+    !input.providedMutableFields.includes(field) || valueMatches;
+
+  return (
+    matches("size_category", existing.sizeCategory === input.size_category) &&
+    matches(
+      "estimated_capacity",
+      existing.estimatedCapacity === (input.estimated_capacity ?? null),
+    ) &&
+    matches(
+      "price_level",
+      existing.priceLevel === (input.price_level ?? null),
+    ) &&
+    matches(
+      "typical_spend_min",
+      existing.typicalSpendMin === (input.typical_spend_min ?? null),
+    ) &&
+    matches(
+      "typical_spend_max",
+      existing.typicalSpendMax === (input.typical_spend_max ?? null),
+    ) &&
+    matches("currency", existing.currency === input.currency) &&
+    matches(
+      "opening_hours",
+      openingHoursAreEqual(existing.openingHours, input.opening_hours ?? null),
+    )
   );
 }
 
@@ -144,6 +178,7 @@ async function loadExistingPlaces(
     latitude: number;
     longitude: number;
     name: string;
+    opening_hours: PlaceOpeningHours | null;
     price_level: number | null;
     size_category: string;
     slug: string;
@@ -153,7 +188,7 @@ async function loadExistingPlaces(
   }>(
     `SELECT id, internal_id, name, slug, address, district, status,
             is_simulated, size_category, estimated_capacity, price_level,
-            typical_spend_min, typical_spend_max, currency,
+            typical_spend_min, typical_spend_max, currency, opening_hours,
             ST_Y(location) AS latitude, ST_X(location) AS longitude
        FROM places
       WHERE internal_id = ANY($1::text[])`,
@@ -174,6 +209,7 @@ async function loadExistingPlaces(
         latitude: row.latitude,
         longitude: row.longitude,
         name: row.name,
+        openingHours: row.opening_hours,
         priceLevel: row.price_level,
         sizeCategory: row.size_category,
         slug: row.slug,
@@ -253,6 +289,7 @@ export async function planPlaces(
     [...existing].map(([internalId, place]) => [internalId, place.id]),
   );
   const create: PlannedPlace[] = [];
+  const update: { id: string; input: PlaceInput }[] = [];
   const conflictingIds = new Set<string>();
   const slugOwners = new Map<string, string>();
 
@@ -274,15 +311,18 @@ export async function planPlaces(
 
     const stored = existing.get(row.internal_id);
     if (stored) {
-      if (placeIsUnchanged(stored, row, slug)) {
-        draft.entities.places.unchanged += 1;
-      } else {
+      if (!immutablePlaceFieldsMatch(stored, row, slug)) {
         conflictingIds.add(row.internal_id);
         draft.issues.push({
           code: "immutable_id_conflict",
-          message: `Place ${row.internal_id} already exists with different content`,
+          message: `Place ${row.internal_id} already exists with different identity content`,
           severity: "error",
         });
+      } else if (mutablePlaceFieldsMatch(stored, row)) {
+        draft.entities.places.unchanged += 1;
+      } else {
+        update.push({ id: stored.id, input: row });
+        draft.entities.places.updated += 1;
       }
       continue;
     }
@@ -358,7 +398,7 @@ export async function planPlaces(
     0,
   );
 
-  return { create: safeCreate, existingIds };
+  return { create: safeCreate, existingIds, update };
 }
 
 export async function insertPlannedPlaces(
@@ -367,16 +407,58 @@ export async function insertPlannedPlaces(
 ): Promise<Map<string, string>> {
   const placeIds = new Map(plan.existingIds);
 
+  for (const place of plan.update) {
+    const input = place.input;
+    const updateFields: string[] = [];
+    const values: unknown[] = [place.id];
+    const setField = (
+      column: string,
+      field: PlaceMutableField,
+      value: unknown,
+    ) => {
+      if (!input.providedMutableFields.includes(field)) return;
+      updateFields.push(`${column} = $${values.length + 1}`);
+      values.push(value);
+    };
+
+    setField("price_level", "price_level", input.price_level ?? null);
+    setField(
+      "typical_spend_min",
+      "typical_spend_min",
+      input.typical_spend_min ?? null,
+    );
+    setField(
+      "typical_spend_max",
+      "typical_spend_max",
+      input.typical_spend_max ?? null,
+    );
+    setField("currency", "currency", input.currency);
+    setField("size_category", "size_category", input.size_category);
+    setField(
+      "estimated_capacity",
+      "estimated_capacity",
+      input.estimated_capacity ?? null,
+    );
+    setField("opening_hours", "opening_hours", input.opening_hours ?? null);
+
+    if (updateFields.length === 0) continue;
+    updateFields.push("updated_at = now()");
+    await client.query(
+      `UPDATE places SET ${updateFields.join(", ")} WHERE id = $1`,
+      values,
+    );
+  }
+
   for (const place of plan.create) {
     const input = place.input;
     const result = await client.query<{ id: string }>(
       `INSERT INTO places
         (internal_id, name, slug, location, address, district, price_level,
          typical_spend_min, typical_spend_max, currency, size_category,
-         estimated_capacity, status, is_simulated)
+         estimated_capacity, opening_hours, status, is_simulated)
        VALUES
         ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), $6, $7, $8,
-         $9, $10, $11, $12, $13, $14, $15)
+         $9, $10, $11, $12, $13, $14, $15, $16)
        RETURNING id`,
       [
         input.internal_id,
@@ -392,6 +474,7 @@ export async function insertPlannedPlaces(
         input.currency,
         input.size_category,
         input.estimated_capacity ?? null,
+        input.opening_hours ?? null,
         input.status,
         input.is_simulated,
       ],
