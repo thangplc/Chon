@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title description">
+  <title id="title">Góc đọc sách yên tĩnh</title>
+  <desc id="description">Minh họa giả lập với ghế bành đèn vàng và kệ sách.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#18352d"/><stop offset="1" stop-color="#42645a"/></linearGradient></defs>
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <rect x="90" y="90" width="450" height="520" rx="24" fill="#24483e" stroke="#d9c593" stroke-width="12"/>
+  <g fill="#f4c96b"><rect x="130" y="150" width="80" height="180"/><rect x="230" y="125" width="62" height="205"/><rect x="315" y="175" width="95" height="155"/><rect x="430" y="135" width="68" height="195"/></g>
+  <path d="M120 370h390M120 545h390" stroke="#d9c593" stroke-width="18"/>
+  <path d="M690 270h220c110 0 150 95 150 220v170H640V430c0-90 10-160 50-160z" fill="#c59635"/>
+  <rect x="700" y="490" width="300" height="185" rx="60" fill="#e7b856"/>
+  <path d="M850 140v180M790 140h120l45 90H745z" fill="#f4c96b" stroke="#f8f3e8" stroke-width="12"/>
+  <ellipse cx="850" cy="720" rx="300" ry="30" fill="#10251f" opacity=".55"/>
+</svg>

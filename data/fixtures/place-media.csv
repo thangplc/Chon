@@ -1,0 +1,15 @@
+media_id,place_id,place_area_id,media_type,storage_key,source_url,thumbnail_key,width,height,source_type,source_reference,rights_status,captured_at,uploaded_by,alt_text,sort_order,moderation_status,is_simulated
+syn_media_001_0,syn_place_001,,image,place-media/synthetic/cafe-window.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Góc cà phê cạnh cửa sổ với bàn gỗ và cây xanh,0,approved,true
+syn_media_001_1,syn_place_001,,image,place-media/synthetic/cafe-reading.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Góc đọc sách với ghế bành và ánh đèn vàng,1,approved,true
+syn_media_001_2,syn_place_001,,image,place-media/synthetic/cafe-counter.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Quầy pha chế gạch xanh với ghế cao,2,approved,true
+syn_media_001_3,syn_place_001,,image,place-media/synthetic/cafe-terrace.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Sân hiên nhiều cây với bàn tròn ngoài trời,3,approved,true
+syn_media_001_4,syn_place_001,,image,place-media/synthetic/cafe-evening.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Không gian buổi tối với đèn treo và bàn dài,4,approved,true
+syn_media_002_0,syn_place_002,,image,place-media/synthetic/cafe-terrace.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Sân hiên giả lập của Hiên Nắng 02,0,approved,true
+syn_media_003_0,syn_place_003,,image,place-media/synthetic/cafe-reading.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Góc đọc sách giả lập của Nếp Nhỏ 03,0,approved,true
+syn_media_004_0,syn_place_004,,image,place-media/synthetic/cafe-counter.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Quầy pha chế giả lập của Trạm Chậm 04,0,approved,true
+syn_media_005_0,syn_place_005,,image,place-media/synthetic/cafe-evening.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Không gian tối giả lập của Đèn Vàng 05,0,approved,true
+syn_media_006_0,syn_place_006,,image,place-media/synthetic/cafe-terrace.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Sân ngoài trời giả lập của Sân Gió 06,0,approved,true
+syn_media_007_0,syn_place_007,,image,place-media/synthetic/cafe-window.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Góc cửa sổ giả lập của Bờ Lá 07,0,approved,true
+syn_media_008_0,syn_place_008,,image,place-media/synthetic/cafe-counter.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Quầy cà phê giả lập của Tầng Hai 08,0,approved,true
+syn_media_009_0,syn_place_009,,image,place-media/synthetic/cafe-reading.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Góc yên tĩnh giả lập của Khoảng Lặng 09,0,approved,true
+syn_media_010_0,syn_place_010,,image,place-media/synthetic/cafe-evening.svg,,,1200,800,synthetic,sprint3-synthetic-gallery-v1,verified,,seed-import,Không gian buổi tối giả lập của Nhịp Phố 10,0,approved,true
