@@ -53,6 +53,10 @@ export const places = pgTable(
   },
   (table) => [
     index("places_location_gist_idx").using("gist", table.location),
+    index("places_location_geography_gist_idx").using(
+      "gist",
+      sql`(${table.location}::geography)`,
+    ),
     index("places_status_idx").on(table.status),
     index("places_district_idx").on(table.district),
     check("places_name_not_blank_check", sql`btrim(${table.name}) <> ''`),
