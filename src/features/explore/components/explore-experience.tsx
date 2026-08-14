@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   exploreDistricts,
@@ -12,6 +12,11 @@ import {
   type VibeDimension,
 } from "../domain/explore-contract";
 import { getExplorePlaces } from "../domain/explore";
+import {
+  ExploreMap,
+  type ExploreMapStatus,
+  type MapViewportBounds,
+} from "./explore-map";
 
 const timeOptions: readonly Readonly<{
   id: TimeBucket;
@@ -69,13 +74,65 @@ function formatPrice(
 
 type ExploreExperienceProps = Readonly<{
   dataset: ExploreDataset;
+  mapStyleUrl: string | null;
 }>;
 
-export function ExploreExperience({ dataset }: ExploreExperienceProps) {
+type ViewportQueryStatus = "idle" | "loading" | "ready" | "error";
+
+function readSpatialPlaceIds(payload: unknown): {
+  hasMore: boolean;
+  placeIds: readonly string[];
+} {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Spatial API response must be an object");
+  }
+
+  const response = payload as {
+    data?: unknown;
+    meta?: { hasMore?: unknown };
+  };
+  if (!Array.isArray(response.data)) {
+    throw new Error("Spatial API response must include a data array");
+  }
+
+  const placeIds = response.data.map((item) => {
+    if (!item || typeof item !== "object" || !("id" in item)) {
+      throw new Error("Spatial API place must include an id");
+    }
+
+    const id = (item as { id: unknown }).id;
+    if (typeof id !== "string" || !id) {
+      throw new Error("Spatial API place id must be a non-empty string");
+    }
+    return id;
+  });
+
+  return {
+    hasMore: response.meta?.hasMore === true,
+    placeIds,
+  };
+}
+
+export function ExploreExperience({
+  dataset,
+  mapStyleUrl,
+}: ExploreExperienceProps) {
   const [purpose, setPurpose] = useState<PurposeId>("work");
   const [timeBucket, setTimeBucket] = useState<TimeBucket>("morning");
   const [district, setDistrict] = useState<"all" | ExploreDistrict>("all");
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [mapAvailabilityStatus, setMapAvailabilityStatus] =
+    useState<ExploreMapStatus>(mapStyleUrl ? "loading" : "unconfigured");
+  const [visiblePlaceIds, setVisiblePlaceIds] =
+    useState<ReadonlySet<string> | null>(null);
+  const [viewportHasMore, setViewportHasMore] = useState(false);
+  const [viewportStatus, setViewportStatus] =
+    useState<ViewportQueryStatus>("idle");
+  const [viewportError, setViewportError] = useState<string | null>(null);
+  const [latestViewport, setLatestViewport] =
+    useState<MapViewportBounds | null>(null);
+  const viewportRequestRef = useRef<AbortController | null>(null);
+  const cardRefs = useRef(new Map<string, HTMLButtonElement>());
   const results = useMemo(
     () =>
       getExplorePlaces(dataset, {
@@ -85,7 +142,118 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
       }),
     [dataset, district, purpose, timeBucket],
   );
+  const visibleResults = useMemo(
+    () =>
+      visiblePlaceIds === null
+        ? results
+        : results.filter(({ id }) => visiblePlaceIds.has(id)),
+    [results, visiblePlaceIds],
+  );
+  const rankByPlaceId = useMemo(
+    () => new Map(results.map(({ id }, index) => [id, index + 1])),
+    [results],
+  );
   const selectedPurpose = purposes.find(({ id }) => id === purpose);
+  const selectedPlace = results.find(({ id }) => id === selectedPlaceId);
+
+  const queryViewport = useCallback(async (bounds: MapViewportBounds) => {
+    setLatestViewport(bounds);
+    viewportRequestRef.current?.abort();
+
+    if (
+      bounds.west >= bounds.east ||
+      bounds.south >= bounds.north ||
+      bounds.east - bounds.west > 1 ||
+      bounds.north - bounds.south > 1
+    ) {
+      setVisiblePlaceIds(null);
+      setViewportHasMore(false);
+      setViewportStatus("error");
+      setViewportError("Hãy phóng to bản đồ để tìm trong vùng nhỏ hơn.");
+      return;
+    }
+
+    const controller = new AbortController();
+    viewportRequestRef.current = controller;
+    setViewportStatus("loading");
+    setViewportError(null);
+
+    try {
+      const bbox = [bounds.west, bounds.south, bounds.east, bounds.north]
+        .map((value) => value.toFixed(6))
+        .join(",");
+      const searchParams = new URLSearchParams({ bbox, limit: "100" });
+      const response = await fetch(`/api/places?${searchParams}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`Spatial API returned ${response.status}`);
+      }
+
+      const spatialResults = readSpatialPlaceIds(await response.json());
+      if (controller.signal.aborted) return;
+
+      const nextVisiblePlaceIds = new Set(spatialResults.placeIds);
+      setVisiblePlaceIds(nextVisiblePlaceIds);
+      setViewportHasMore(spatialResults.hasMore);
+      setViewportStatus("ready");
+      setSelectedPlaceId((current) =>
+        current && !nextVisiblePlaceIds.has(current) ? null : current,
+      );
+    } catch (error) {
+      if (controller.signal.aborted) return;
+
+      setVisiblePlaceIds(null);
+      setViewportHasMore(false);
+      setViewportStatus("error");
+      setViewportError(
+        error instanceof Error
+          ? "Không thể cập nhật theo vùng bản đồ. Đang hiển thị danh sách dự phòng."
+          : "Không thể cập nhật theo vùng bản đồ.",
+      );
+    }
+  }, []);
+
+  const handleViewportChange = useCallback(
+    (bounds: MapViewportBounds) => {
+      void queryViewport(bounds);
+    },
+    [queryViewport],
+  );
+
+  const handleMapStatusChange = useCallback((status: ExploreMapStatus) => {
+    setMapAvailabilityStatus(status);
+    if (status !== "error" && status !== "unconfigured") return;
+
+    viewportRequestRef.current?.abort();
+    setVisiblePlaceIds(null);
+    setViewportHasMore(false);
+    setViewportStatus("idle");
+    setViewportError(null);
+  }, []);
+
+  const showAllResults = useCallback(() => {
+    viewportRequestRef.current?.abort();
+    setVisiblePlaceIds(null);
+    setViewportHasMore(false);
+    setViewportStatus("idle");
+    setViewportError(null);
+  }, []);
+
+  useEffect(
+    () => () => {
+      viewportRequestRef.current?.abort();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!selectedPlaceId) return;
+
+    const selectedCard = cardRefs.current.get(selectedPlaceId);
+    selectedCard?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  }, [selectedPlaceId, visibleResults]);
 
   return (
     <main className="min-h-screen bg-[#f3efe5] text-[#18352d]">
@@ -149,9 +317,10 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
                 <select
                   aria-label="Khu vực"
                   className="mt-1 block w-full rounded-xl border border-white/15 bg-white px-3 py-2.5 text-sm font-semibold text-[#173f33]"
-                  onChange={(event) =>
-                    setDistrict(event.target.value as "all" | ExploreDistrict)
-                  }
+                  onChange={(event) => {
+                    setDistrict(event.target.value as "all" | ExploreDistrict);
+                    setSelectedPlaceId(null);
+                  }}
                   value={district}
                 >
                   <option value="all">Tất cả khu vực</option>
@@ -191,49 +360,45 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
           </div>
         </section>
 
-        <section className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)]">
-          <div
-            aria-label="Bản đồ mô phỏng các địa điểm"
-            className="relative min-h-[340px] overflow-hidden rounded-[2rem] border border-[#173f33]/10 bg-[#d9ddc7] shadow-sm lg:min-h-[680px]"
-            role="region"
-          >
-            <div className="absolute inset-0 [background-image:linear-gradient(32deg,transparent_43%,#fff_44%,#fff_47%,transparent_48%),linear-gradient(128deg,transparent_46%,#fff_47%,#fff_50%,transparent_51%),linear-gradient(8deg,transparent_62%,#b9c9b0_63%,#b9c9b0_67%,transparent_68%)] opacity-50" />
-            <div className="absolute top-5 left-5 rounded-full bg-white/90 px-3 py-2 text-xs font-bold shadow-sm backdrop-blur">
-              Bản đồ preview · MapLibre ở task kế tiếp
-            </div>
+        <section className="mt-5 grid gap-0 lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)] lg:gap-4">
+          <div className="relative self-start overflow-hidden rounded-[2rem] border border-[#173f33]/10 bg-[#d9ddc7] shadow-sm lg:sticky lg:top-4">
+            <a
+              className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-[#173f33] focus:shadow-lg focus:outline-2 focus:outline-offset-2 focus:outline-[#c59635]"
+              href="#explore-results"
+            >
+              Bỏ qua bản đồ, đến danh sách địa điểm
+            </a>
+            <ExploreMap
+              mapStyleUrl={mapStyleUrl}
+              onSelectPlace={setSelectedPlaceId}
+              onStatusChange={handleMapStatusChange}
+              onViewportChange={handleViewportChange}
+              places={results}
+              selectedPlaceId={selectedPlaceId}
+            />
             <div className="absolute right-5 bottom-5 rounded-2xl bg-white/90 p-3 text-xs leading-5 text-[#42645a] shadow-sm backdrop-blur">
               <strong className="block text-[#173f33]">Nguồn vibe</strong>
               Community giả lập · PostgreSQL
             </div>
-
-            {results.map((place, index) => {
-              const selected = selectedPlaceId === place.id;
-              return (
-                <button
-                  aria-label={`Chọn ${place.name} trên bản đồ`}
-                  className={`absolute grid size-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white text-sm font-black shadow-lg transition hover:scale-110 focus:ring-4 focus:ring-[#f4c96b]/60 focus:outline-none ${
-                    selected
-                      ? "z-20 bg-[#f4c96b] text-[#173f33]"
-                      : "z-10 bg-[#173f33] text-white"
-                  }`}
-                  key={place.id}
-                  onClick={() => setSelectedPlaceId(place.id)}
-                  style={{
-                    left: `${place.mapPosition.x}%`,
-                    top: `${place.mapPosition.y}%`,
-                  }}
-                  type="button"
-                >
-                  {index + 1}
-                </button>
-              );
-            })}
           </div>
 
           <section
+            aria-describedby="explore-results-help"
             aria-labelledby="result-title"
-            className="rounded-[2rem] border border-[#173f33]/10 bg-white/75 p-4 shadow-sm backdrop-blur sm:p-5"
+            aria-busy={viewportStatus === "loading"}
+            className="relative z-20 -mt-10 max-h-[70vh] overflow-y-auto rounded-t-[2rem] border border-[#173f33]/10 bg-white/90 p-4 shadow-xl backdrop-blur sm:p-5 lg:z-auto lg:mt-0 lg:max-h-none lg:overflow-visible lg:rounded-[2rem] lg:bg-white/75 lg:shadow-sm"
+            id="explore-results"
+            tabIndex={-1}
           >
+            <p className="sr-only" id="explore-results-help">
+              Danh sách này cung cấp đầy đủ kết quả thay thế cho bản đồ. Dùng
+              phím Tab để di chuyển và Enter hoặc Space để chọn địa điểm.
+            </p>
+            <p aria-atomic="true" aria-live="polite" className="sr-only">
+              {selectedPlace
+                ? `${selectedPlace.name} đang được chọn.`
+                : "Chưa chọn địa điểm."}
+            </p>
             <div className="flex items-end justify-between gap-3 border-b border-[#173f33]/10 pb-4">
               <div>
                 <p className="text-xs font-bold tracking-[0.12em] text-[#6b7d74] uppercase">
@@ -241,10 +406,15 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
                   {timeOptions.find(({ id }) => id === timeBucket)?.label}
                 </p>
                 <h2
+                  aria-atomic="true"
+                  aria-live="polite"
                   id="result-title"
                   className="mt-1 text-2xl font-bold tracking-tight"
                 >
-                  {results.length} Chốn để thử
+                  {visibleResults.length}{" "}
+                  {mapStyleUrl && viewportStatus === "ready"
+                    ? "Chốn trong vùng bản đồ"
+                    : "Chốn để thử"}
                 </h2>
               </div>
               <span className="rounded-full bg-[#edf0e5] px-3 py-1 text-xs font-semibold text-[#42645a]">
@@ -252,33 +422,126 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
               </span>
             </div>
 
-            <ol className="mt-4 space-y-3">
-              {results.map((place, index) => {
+            {(mapAvailabilityStatus === "unconfigured" ||
+              mapAvailabilityStatus === "error") && (
+              <div
+                className="mt-3 rounded-xl border border-[#315d50]/15 bg-[#edf0e5] px-3 py-2 text-xs leading-5 text-[#315d50]"
+                role="status"
+              >
+                <strong className="block">
+                  {mapAvailabilityStatus === "error"
+                    ? "Bản đồ đang không khả dụng"
+                    : "Bản đồ chưa được cấu hình"}
+                </strong>
+                Danh sách bên dưới vẫn chứa đầy đủ địa điểm và có thể sử dụng
+                độc lập.
+              </div>
+            )}
+
+            {mapStyleUrl && viewportStatus !== "idle" && (
+              <div
+                aria-live="polite"
+                className={`mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs ${
+                  viewportStatus === "error"
+                    ? "bg-[#f7eee0] text-[#805b39]"
+                    : "bg-[#edf0e5] text-[#42645a]"
+                }`}
+                role={viewportStatus === "error" ? "alert" : "status"}
+              >
+                <span className="flex items-center gap-2">
+                  {viewportStatus === "loading" && (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-[#42645a]/25 border-t-[#42645a]"
+                      />
+                      Đang đồng bộ danh sách với vùng bản đồ…
+                    </>
+                  )}
+                  {viewportStatus === "ready" &&
+                    `${visibleResults.length} địa điểm đang nằm trong vùng xem.`}
+                  {viewportStatus === "error" && viewportError}
+                </span>
+                {viewportStatus === "error" && latestViewport && (
+                  <button
+                    className="shrink-0 rounded-lg border border-[#805b39]/20 bg-white px-2.5 py-1 font-bold"
+                    onClick={() => {
+                      if (latestViewport) {
+                        void queryViewport(latestViewport);
+                      }
+                    }}
+                    type="button"
+                  >
+                    Thử lại
+                  </button>
+                )}
+              </div>
+            )}
+
+            {viewportStatus === "ready" && viewportHasMore && (
+              <p className="mt-2 text-xs text-[#805b39]">
+                Vùng này có hơn 100 địa điểm. Hãy phóng to để thu hẹp kết quả.
+              </p>
+            )}
+
+            <ol
+              aria-busy={viewportStatus === "loading"}
+              aria-label="Danh sách địa điểm phù hợp"
+              className="mt-4 space-y-3"
+            >
+              {visibleResults.map((place) => {
                 const selected = selectedPlaceId === place.id;
                 const vibe = place.vibe;
+                const rank = rankByPlaceId.get(place.id);
+                const placeRankId = `place-${place.id}-rank`;
+                const placeNameId = `place-${place.id}-name`;
+                const placeMetaId = `place-${place.id}-meta`;
+                const placeMatchId = `place-${place.id}-match`;
+                const placeStatusId = `place-${place.id}-status`;
                 return (
                   <li key={place.id}>
                     <button
+                      aria-current={selected ? "true" : undefined}
+                      aria-describedby={`${placeMetaId} ${
+                        place.matchScore === null ? "" : placeMatchId
+                      } ${placeStatusId}`.replaceAll("  ", " ")}
+                      aria-labelledby={`${placeRankId} ${placeNameId}`}
                       aria-pressed={selected}
-                      className={`w-full rounded-2xl border p-4 text-left transition ${
+                      className={`w-full rounded-2xl border p-4 text-left transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c59635] ${
                         selected
                           ? "border-[#c59635] bg-[#fff8e7] shadow-md"
                           : "border-[#173f33]/10 bg-white hover:border-[#2f6555]/35"
                       }`}
                       onClick={() => setSelectedPlaceId(place.id)}
+                      ref={(element) => {
+                        if (element) cardRefs.current.set(place.id, element);
+                        else cardRefs.current.delete(place.id);
+                      }}
                       type="button"
                     >
                       <div className="flex items-start gap-3">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#edf0e5] text-sm font-black text-[#315d50]">
-                          {index + 1}
+                        <span
+                          aria-hidden="true"
+                          className="grid size-9 shrink-0 place-items-center rounded-full bg-[#edf0e5] text-sm font-black text-[#315d50]"
+                        >
+                          {rank}
                         </span>
                         <span className="min-w-0 flex-1">
+                          <span className="sr-only" id={placeRankId}>
+                            Hạng {rank}.
+                          </span>
                           <span className="flex items-start justify-between gap-3">
                             <span>
-                              <strong className="block text-lg leading-6">
+                              <strong
+                                className="block text-lg leading-6"
+                                id={placeNameId}
+                              >
                                 {place.name}
                               </strong>
-                              <span className="mt-0.5 block text-xs text-[#6b7d74]">
+                              <span
+                                className="mt-0.5 block text-xs text-[#6b7d74]"
+                                id={placeMetaId}
+                              >
                                 {place.district} ·{" "}
                                 {formatPrice(
                                   place.typicalSpendMin,
@@ -287,11 +550,21 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
                                 )}
                               </span>
                             </span>
-                            {place.matchScore !== null && (
-                              <span className="rounded-full bg-[#173f33] px-2.5 py-1 text-xs font-bold text-white">
-                                {place.matchScore}%
-                              </span>
-                            )}
+                            <span className="flex shrink-0 flex-col items-end gap-1.5">
+                              {place.matchScore !== null && (
+                                <span
+                                  className="rounded-full bg-[#173f33] px-2.5 py-1 text-xs font-bold text-white"
+                                  id={placeMatchId}
+                                >
+                                  {place.matchScore}% phù hợp
+                                </span>
+                              )}
+                              {selected && (
+                                <span className="rounded-full border border-[#c59635]/35 bg-[#fff8e7] px-2.5 py-1 text-[11px] font-bold text-[#805b39]">
+                                  Đang chọn
+                                </span>
+                              )}
+                            </span>
                           </span>
 
                           <span className="mt-3 flex flex-wrap gap-1.5">
@@ -312,7 +585,10 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
                             )}
                           </span>
 
-                          <span className="mt-3 block text-xs font-semibold text-[#6b7d74]">
+                          <span
+                            className="mt-3 block text-xs font-semibold text-[#6b7d74]"
+                            id={placeStatusId}
+                          >
                             {confidenceLabel(place.confidence)} ·{" "}
                             {place.reportCount} góp ý mô phỏng
                           </span>
@@ -322,10 +598,27 @@ export function ExploreExperience({ dataset }: ExploreExperienceProps) {
                   </li>
                 );
               })}
-              {results.length === 0 && (
-                <li className="rounded-2xl border border-dashed border-[#173f33]/20 bg-white p-5 text-sm leading-6 text-[#5e746a]">
-                  Chưa có địa điểm giả lập trong database cho khu vực này. Hãy
-                  chạy importer CSV local trước khi thử Explore.
+              {visibleResults.length === 0 && (
+                <li className="rounded-2xl border border-dashed border-[#173f33]/20 bg-white p-6 text-center text-sm leading-6 text-[#5e746a]">
+                  <strong className="block text-base text-[#173f33]">
+                    {viewportStatus === "ready"
+                      ? "Không có Chốn trong vùng này"
+                      : "Chưa có địa điểm phù hợp"}
+                  </strong>
+                  <span className="mt-1 block">
+                    {viewportStatus === "ready"
+                      ? "Hãy di chuyển bản đồ, thu nhỏ hoặc xem lại toàn bộ danh sách."
+                      : "Hãy đổi khu vực, thời gian hoặc mục đích để xem kết quả khác."}
+                  </span>
+                  {viewportStatus === "ready" && results.length > 0 && (
+                    <button
+                      className="mt-4 rounded-xl border border-[#315d50]/20 bg-[#edf0e5] px-4 py-2 font-bold text-[#315d50] transition hover:bg-[#e2e7d9]"
+                      onClick={showAllResults}
+                      type="button"
+                    >
+                      Xem toàn bộ danh sách
+                    </button>
+                  )}
                 </li>
               )}
             </ol>
