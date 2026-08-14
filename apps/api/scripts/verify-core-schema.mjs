@@ -15,6 +15,7 @@ const requiredTables = [
   "service_area_boundaries",
   "service_areas",
   "vibe_reports",
+  "vibe_snapshots",
 ];
 
 function requireEnvironmentValue(name) {
@@ -103,11 +104,15 @@ async function verifyMetadata(client) {
         "service_area_boundaries_boundary_gist_idx",
         "service_area_boundaries_one_current_unique",
         "place_service_areas_one_primary_unique",
+        "vibe_snapshots_area_level_unique",
+        "vibe_snapshots_component_idx",
+        "vibe_snapshots_place_level_unique",
+        "vibe_snapshots_place_time_idx",
       ],
     ],
   );
 
-  assert.equal(indexes.rowCount, 8);
+  assert.equal(indexes.rowCount, 12);
   assert.match(
     indexes.rows.find(
       ({ indexname }) => indexname === "places_location_gist_idx",
@@ -249,6 +254,18 @@ async function verifyDomainRules(client) {
         0.5, now(), 'https://maps.google.com/?cid=verify-google-place',
         'Google Maps', 'reference_only')`,
     [placeId, googleSourceId],
+  );
+
+  await client.query(
+    `INSERT INTO vibe_snapshots
+       (place_id, component, day_type, time_bucket, noise, crowd, lighting,
+        privacy, workability, social_energy, report_count, confidence_score,
+        confidence_level, last_report_at, source_data_types, is_simulated,
+        aggregation_version)
+     VALUES
+       ($1, 'contribution', 'weekday', 'morning', 2, 3, 3, 4, 5, 2, 1, 0.4,
+        'low', now() - interval '1 hour', '["synthetic"]'::jsonb, true, 'v1')`,
+    [placeId],
   );
 
   const coverage = await client.query(

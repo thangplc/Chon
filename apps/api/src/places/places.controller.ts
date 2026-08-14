@@ -13,6 +13,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
 import {
@@ -22,6 +23,11 @@ import {
 
 import type { ApiEnvironment } from "../config/api-environment";
 import { PlacesService } from "./places.service";
+import {
+  parseVibeSnapshotQuery,
+  VibeSnapshotQueryValidationError,
+} from "../vibe-snapshots/vibe-snapshot-query";
+import { VibeSnapshotsService } from "../vibe-snapshots/vibe-snapshots.service";
 
 type RequestWithUrl = Readonly<{
   originalUrl?: string;
@@ -36,6 +42,8 @@ export class PlacesController {
     private readonly config: ConfigService<ApiEnvironment, true>,
     @Inject(PlacesService)
     private readonly placesService: PlacesService,
+    @Inject(VibeSnapshotsService)
+    private readonly vibeSnapshotsService: VibeSnapshotsService,
   ) {}
 
   @ApiOperation({ summary: "Query published places by bbox or radius" })
@@ -82,6 +90,51 @@ export class PlacesController {
         },
         503,
       );
+    }
+  }
+
+  @ApiOperation({ summary: "Read contribution vibe snapshots for a place" })
+  @ApiOkResponse({ description: "Time-context vibe snapshots" })
+  @ApiQuery({ name: "day_type", required: false })
+  @ApiQuery({ name: "time_bucket", required: false })
+  @ApiQuery({ name: "area_id", required: false })
+  @ApiParam({ name: "slug" })
+  @Get(":slug/vibe")
+  async findVibeSnapshots(
+    @Param("slug") slug: string,
+    @Req() request: RequestWithUrl,
+  ) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      throw new NotFoundException();
+    }
+
+    try {
+      const requestUrl = request.originalUrl ?? request.url;
+      const query = parseVibeSnapshotQuery(
+        new URL(requestUrl, "http://chon-api.local").searchParams,
+      );
+      const response = await this.vibeSnapshotsService.findByPlaceSlug(
+        slug,
+        this.config.get("DATA_IMPORT_TARGET_ENVIRONMENT", { infer: true }),
+        query,
+      );
+      if (!response) throw new NotFoundException();
+      return { data: response };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      if (error instanceof VibeSnapshotQueryValidationError) {
+        throw new HttpException(
+          {
+            code: error.code,
+            detail: error.message,
+            status: 400,
+            title: "Invalid vibe snapshot query",
+            type: "about:blank",
+          },
+          400,
+        );
+      }
+      throw error;
     }
   }
 

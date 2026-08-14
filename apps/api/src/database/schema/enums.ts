@@ -81,6 +81,17 @@ export const timeBucketEnum = pgEnum("time_bucket", [
   "late",
 ]);
 
+export const vibeSnapshotComponentEnum = pgEnum("vibe_snapshot_component", [
+  "contribution",
+  "provider",
+]);
+
+export const vibeConfidenceLevelEnum = pgEnum("vibe_confidence_level", [
+  "low",
+  "medium",
+  "high",
+]);
+
 export const visitModeEnum = pgEnum("visit_mode", [
   "work",
   "study",

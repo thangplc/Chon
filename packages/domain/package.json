@@ -7,7 +7,8 @@
     "./explore": "./src/explore/explore.ts",
     "./explore-contract": "./src/explore/explore-contract.ts",
     "./place-detail": "./src/place-detail/place-detail.ts",
-    "./spatial-query": "./src/places/spatial-query.ts"
+    "./spatial-query": "./src/places/spatial-query.ts",
+    "./vibe-snapshot": "./src/vibe/vibe-snapshot.ts"
   },
   "devDependencies": {
     "vitest": "^4.1.10"

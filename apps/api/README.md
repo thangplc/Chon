@@ -80,6 +80,7 @@ volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:d
 - `GET /v1/places?bbox=west,south,east,north&limit=50`
 - `GET /v1/places?lat=10.775&lng=106.700&radius=1500&limit=50`
 - `GET /v1/places/:slug`
+- `GET /v1/places/:slug/vibe?day_type=weekday&time_bucket=morning&area_id=<uuid>`
 - `GET /v1/explore/simulated`
 - `GET /openapi.json`
 - `GET /docs`
@@ -101,3 +102,21 @@ API environment file; Next.js does not load it.
 
 Root commands như `pnpm db:migrate`, `pnpm data:import` và
 `pnpm provider:status` chỉ delegate vào scripts/tooling của app này.
+
+## Vibe snapshots
+
+Snapshot là dữ liệu dẫn xuất từ các `vibe_reports` đã `approved`. Rebuild chỉ
+ghi component `contribution`; provider component và fusion policy được triển
+khai ở task Sprint 3 sau.
+
+```bash
+# Kiểm tra số report/snapshot mà không ghi database
+pnpm vibe:snapshots:rebuild --environment local --dry-run
+
+# Rebuild idempotent trong database local
+pnpm vibe:snapshots:rebuild --environment local
+```
+
+Lệnh ghi yêu cầu `DATA_IMPORT_TARGET_ENVIRONMENT` trong `apps/api/.env` khớp
+với `--environment`. Production chỉ nhận report `editorial`/`community` không
+mô phỏng.

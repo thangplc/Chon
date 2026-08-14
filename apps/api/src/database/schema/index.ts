@@ -8,3 +8,4 @@ export * from "./provider-vibe-signals";
 export * from "./postgis";
 export * from "./service-areas";
 export * from "./vibe-reports";
+export * from "./vibe-snapshots";
