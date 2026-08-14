@@ -55,7 +55,7 @@ describe("evaluateImportEnvironmentPolicy", () => {
     ]);
   });
 
-  it("rejects simulated places, areas and otherwise allowed reports", () => {
+  it("rejects simulated places, areas, media and otherwise allowed reports", () => {
     const issues = evaluateImportEnvironmentPolicy("production", [
       {
         entity: "place",
@@ -71,11 +71,18 @@ describe("evaluateImportEnvironmentPolicy", () => {
         isSimulated: true,
         row: 2,
       },
+      {
+        entity: "place_media",
+        file: "place-media.csv",
+        identifier: "simulated_media",
+        isSimulated: true,
+        row: 2,
+      },
       report("editorial", true),
       report("community", true),
     ]);
 
-    expect(issues).toHaveLength(4);
+    expect(issues).toHaveLength(5);
     expect(
       issues.every(
         ({ code }) => code === "production_simulated_record_forbidden",

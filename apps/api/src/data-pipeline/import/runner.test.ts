@@ -86,7 +86,7 @@ describe("runDataImport environment policy", () => {
         command: "seed",
         dryRun: true,
         environment: "production",
-        input: { directory: resolve("data/fixtures") },
+        input: { directory: resolve("../../data/fixtures") },
         operatorId: "test-operator",
       },
       client,

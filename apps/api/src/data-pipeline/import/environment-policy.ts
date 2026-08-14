@@ -7,7 +7,7 @@ export type ImportPolicyDataType =
 
 export type ImportPolicyRecord = Readonly<{
   dataType?: ImportPolicyDataType;
-  entity: "place" | "place_area" | "vibe_report";
+  entity: "place" | "place_area" | "place_media" | "vibe_report";
   file: string;
   identifier: string;
   isSimulated: boolean;

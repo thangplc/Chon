@@ -4,6 +4,7 @@ import type { ParsedCsv } from "./csv";
 import { ImportError } from "./types";
 import {
   validatePlaces,
+  validatePlaceMedia,
   validatePlaceSources,
   validateVibeReports,
 } from "./validation";
@@ -56,6 +57,64 @@ describe("data import validation", () => {
     );
 
     expect(rows[0].data_type).toBe("research");
+  });
+
+  it("accepts simulated media with a verified local storage key", () => {
+    const rows = validatePlaceMedia(
+      parsed({
+        alt_text: "Góc cửa sổ giả lập",
+        captured_at: "",
+        height: "800",
+        is_simulated: "true",
+        media_id: "syn_media_test",
+        media_type: "image",
+        moderation_status: "approved",
+        place_area_id: "",
+        place_id: "syn_test_place",
+        rights_status: "verified",
+        sort_order: "0",
+        source_reference: "test-seed-v1",
+        source_type: "synthetic",
+        source_url: "",
+        storage_key: "place-media/synthetic/test.svg",
+        thumbnail_key: "",
+        uploaded_by: "seed-import",
+        width: "1200",
+      }),
+    );
+
+    expect(rows[0]).toMatchObject({
+      is_simulated: true,
+      sort_order: 0,
+      source_type: "synthetic",
+    });
+  });
+
+  it("rejects media with both a storage key and source URL", () => {
+    expect(() =>
+      validatePlaceMedia(
+        parsed({
+          alt_text: "Invalid media",
+          captured_at: "",
+          height: "800",
+          is_simulated: "false",
+          media_id: "real_media_test",
+          media_type: "image",
+          moderation_status: "approved",
+          place_area_id: "",
+          place_id: "real_test_place",
+          rights_status: "verified",
+          sort_order: "0",
+          source_reference: "editorial-v1",
+          source_type: "editorial",
+          source_url: "https://example.com/media.svg",
+          storage_key: "place-media/editorial/test.svg",
+          thumbnail_key: "",
+          uploaded_by: "editor",
+          width: "1200",
+        }),
+      ),
+    ).toThrow(ImportError);
   });
 
   it("rejects real research without consent and participant ID", () => {

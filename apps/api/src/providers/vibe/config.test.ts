@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readProviderVibeConfig } from "./provider-vibe";
+import { readProviderVibeConfig } from "./config";
 
 describe("readProviderVibeConfig", () => {
   it("keeps every provider disabled by default", () => {

@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-api-env.mjs";
 
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -8,8 +8,8 @@ import { join } from "node:path";
 import {
   beginImportTransaction,
   createImportDatabaseClient,
-} from "../src/data-import/database";
-import { runDataImport } from "../src/data-import/runner";
+} from "../src/data-pipeline/import/database";
+import { runDataImport } from "../src/data-pipeline/import/runner";
 
 async function main() {
   const directory = await mkdtemp(join(tmpdir(), "chon-import-"));
@@ -191,6 +191,21 @@ async function main() {
     assert.equal(reactivateBoundaryV1.status, "passed");
     assert.equal(reactivateBoundaryV1.entities.boundaries.updated, 1);
 
+    const expectedMemberships = await client.query<{ count: number }>(
+      `SELECT count(*)::integer AS count
+         FROM service_area_boundaries AS boundary
+         JOIN service_areas AS area ON area.id = boundary.service_area_id
+        WHERE boundary.is_current = true
+          AND area.status = 'active'
+          AND ST_Covers(
+            boundary.boundary,
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)
+          )`,
+      [106.7, 10.78],
+    );
+    const expectedMembershipCount = expectedMemberships.rows[0].count;
+    assert.ok(expectedMembershipCount >= 1);
+
     const poi = await runDataImport(
       {
         command: "poi",
@@ -204,7 +219,10 @@ async function main() {
     );
     assert.equal(poi.status, "passed");
     assert.equal(poi.entities.places.created, 1);
-    assert.equal(poi.entities.placeServiceAreas.created, 1);
+    assert.equal(
+      poi.entities.placeServiceAreas.created,
+      expectedMembershipCount,
+    );
     assert.equal(poi.entities.placeSources.created, 1);
 
     const repeatPoi = await runDataImport(
@@ -341,7 +359,7 @@ async function main() {
     );
     assert.deepEqual(databaseState.rows[0], {
       is_covered: true,
-      membership_count: 1,
+      membership_count: expectedMembershipCount,
       report_count: 1,
       source_count: 1,
     });
@@ -383,6 +401,8 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  console.error(
+    error instanceof Error ? (error.stack ?? error.message) : error,
+  );
   process.exitCode = 1;
 });

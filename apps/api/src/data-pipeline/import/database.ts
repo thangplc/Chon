@@ -1,6 +1,6 @@
 import pg from "pg";
 
-import { readDatabaseConfig } from "@/config/database";
+import { readDatabaseConfig } from "../../database/config";
 
 const { Client } = pg;
 

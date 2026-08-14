@@ -1,7 +1,9 @@
-import "dotenv/config";
+import "./load-api-env.mjs";
 
-import { readProviderVibeConfig } from "../src/config/provider-vibe";
-import { createProviderVibeRegistry } from "../src/providers/vibe/registry";
+import {
+  createProviderVibeRegistry,
+  readProviderVibeConfig,
+} from "../src/providers/vibe";
 
 const requireAllCredentials = process.argv.includes("--require-all");
 

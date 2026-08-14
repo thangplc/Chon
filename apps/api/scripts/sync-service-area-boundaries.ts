@@ -7,14 +7,14 @@ import {
   serviceAreaBoundaries,
   serviceAreaBoundarySimplifyToleranceDegrees,
   type ServiceAreaBoundaryDefinition,
-} from "../src/config/service-area-boundaries";
-import { sha256 } from "../src/data-import/csv";
+} from "../src/data-pipeline/service-area-boundaries";
+import { sha256 } from "../src/data-pipeline/import/csv";
 import {
   getBoundarySourceManifestPath,
   getBoundarySourceObjectPath,
   readVerifiedBoundarySourceObject,
   type BoundarySourceManifest,
-} from "../src/service-areas/source-object";
+} from "../src/data-pipeline/source-object";
 
 type JsonObject = Record<string, unknown>;
 

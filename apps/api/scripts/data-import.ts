@@ -1,14 +1,21 @@
-import "dotenv/config";
+import "./load-api-env.mjs";
 
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import {
   runDataImport,
   type DataImportOptions,
-} from "../src/data-import/runner";
-import { printSummary } from "../src/data-import/summary";
-import type { ImportEnvironment } from "../src/data-import/types";
+} from "../src/data-pipeline/import/runner";
+import { printSummary } from "../src/data-pipeline/import/summary";
+import type { ImportEnvironment } from "../src/data-pipeline/import/types";
+
+const workspaceRoot = fileURLToPath(new URL("../../..", import.meta.url));
+
+function resolveWorkspacePath(value: string): string {
+  return resolve(workspaceRoot, value);
+}
 
 const HELP = `Chốn data importer
 
@@ -127,8 +134,10 @@ function parseCommand(argv: readonly string[]): {
         dryRun: shared.dryRun,
         environment: shared.environment,
         input: {
-          filePath: resolve(required(values.file, "file")),
-          sourcesPath: resolve(required(values.sources, "sources")),
+          filePath: resolveWorkspacePath(required(values.file, "file")),
+          sourcesPath: resolveWorkspacePath(
+            required(values.sources, "sources"),
+          ),
         },
         operatorId: shared.operatorId,
       },
@@ -148,7 +157,7 @@ function parseCommand(argv: readonly string[]): {
         command,
         dryRun: shared.dryRun,
         environment: shared.environment,
-        input: { directory: resolve(required(values.dir, "dir")) },
+        input: { directory: resolveWorkspacePath(required(values.dir, "dir")) },
         operatorId: shared.operatorId,
       },
     };
@@ -217,7 +226,7 @@ function parseCommand(argv: readonly string[]): {
           })(),
           current: values.current === true,
           displayName: bounded(values.name, "name", 120),
-          filePath: resolve(required(values.file, "file")),
+          filePath: resolveWorkspacePath(required(values.file, "file")),
           parentCode:
             typeof values["parent-code"] === "string"
               ? (() => {

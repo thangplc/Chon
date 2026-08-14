@@ -111,6 +111,67 @@ const placeSourceSchema = z
   })
   .strict();
 
+const placeMediaSchema = z
+  .object({
+    alt_text: requiredText(240),
+    captured_at: optionalTimestamp,
+    height: integer(1),
+    is_simulated: strictBoolean,
+    media_id: internalId,
+    media_type: z.literal("image"),
+    moderation_status: z.enum([
+      "pending",
+      "approved",
+      "flagged",
+      "rejected",
+      "archived",
+    ]),
+    place_area_id: z.preprocess(
+      (value) => (value === "" || value === undefined ? undefined : value),
+      internalId.optional(),
+    ),
+    place_id: internalId,
+    rights_status: z.enum([
+      "verified",
+      "provider_allowed",
+      "pending",
+      "rejected",
+    ]),
+    sort_order: integer(0, 4),
+    source_reference: optionalText(255),
+    source_type: z.enum(["provider", "editorial", "community", "synthetic"]),
+    source_url: z.preprocess(
+      (value) => (value === "" || value === undefined ? undefined : value),
+      z.url().max(2_048).optional(),
+    ),
+    storage_key: optionalText(512),
+    thumbnail_key: optionalText(512),
+    uploaded_by: optionalText(128),
+    width: integer(1),
+  })
+  .strict()
+  .superRefine((row, context) => {
+    if (Boolean(row.storage_key) === Boolean(row.source_url)) {
+      context.addIssue({
+        code: "custom",
+        message: "exactly one of storage_key or source_url is required",
+      });
+    }
+
+    if (
+      row.source_type === "synthetic" &&
+      (!row.is_simulated ||
+        !row.storage_key ||
+        row.rights_status !== "verified")
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "synthetic media requires is_simulated=true, storage_key and rights_status=verified",
+      });
+    }
+  });
+
 const vibeReportSchema = z
   .object({
     consent_recorded: optionalBoolean,
@@ -255,6 +316,7 @@ const vibeReportSchema = z
 
 export type PlaceInput = z.output<typeof placeSchema>;
 export type PlaceAreaInput = z.output<typeof placeAreaSchema>;
+export type PlaceMediaInput = z.output<typeof placeMediaSchema>;
 export type PlaceSourceInput = z.output<typeof placeSourceSchema>;
 export type VibeReportInput = z.output<typeof vibeReportSchema>;
 
@@ -310,6 +372,12 @@ export function validatePlaceSources(
   parsed: ParsedCsv,
 ): readonly PlaceSourceInput[] {
   return validateRecords(parsed, placeSourceSchema);
+}
+
+export function validatePlaceMedia(
+  parsed: ParsedCsv,
+): readonly PlaceMediaInput[] {
+  return validateRecords(parsed, placeMediaSchema);
 }
 
 export function validateVibeReports(

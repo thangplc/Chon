@@ -9,6 +9,7 @@ export type ImportEntity =
   | "boundaries"
   | "places"
   | "placeAreas"
+  | "placeMedia"
   | "placeSources"
   | "placeServiceAreas"
   | "vibeReports";
@@ -80,6 +81,7 @@ export function createEntityCounts(): MutableEntityCounts {
     boundaries: { conflicts: 0, created: 0, unchanged: 0, updated: 0 },
     places: { conflicts: 0, created: 0, unchanged: 0, updated: 0 },
     placeAreas: { conflicts: 0, created: 0, unchanged: 0, updated: 0 },
+    placeMedia: { conflicts: 0, created: 0, unchanged: 0, updated: 0 },
     placeSources: { conflicts: 0, created: 0, unchanged: 0, updated: 0 },
     placeServiceAreas: {
       conflicts: 0,

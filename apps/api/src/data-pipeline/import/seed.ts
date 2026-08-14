@@ -1,12 +1,19 @@
 import type { ImportDatabaseClient } from "./database";
 import type { SummaryDraft } from "./summary";
-import type { PlaceAreaInput, PlaceInput, VibeReportInput } from "./validation";
+import type {
+  PlaceAreaInput,
+  PlaceInput,
+  PlaceMediaInput,
+  VibeReportInput,
+} from "./validation";
 
 type PlannedArea = Readonly<{ input: PlaceAreaInput }>;
+type PlannedMedia = Readonly<{ input: PlaceMediaInput }>;
 type PlannedReport = Readonly<{ input: VibeReportInput }>;
 
 export type SeedPlan = Readonly<{
   areas: readonly PlannedArea[];
+  media: readonly PlannedMedia[];
   reports: readonly PlannedReport[];
 }>;
 
@@ -148,6 +155,172 @@ async function loadKnownAreas(
 
   for (const row of result.rows) known.set(row.area_id, row.place_id);
   return known;
+}
+
+function mediaIsUnchanged(
+  stored: {
+    alt_text: string;
+    captured_at: Date | null;
+    height: number;
+    is_simulated: boolean;
+    media_type: string;
+    moderation_status: string;
+    place_area_internal_id: string | null;
+    place_internal_id: string;
+    rights_status: string;
+    sort_order: number;
+    source_reference: string | null;
+    source_type: string;
+    source_url: string | null;
+    storage_key: string | null;
+    thumbnail_key: string | null;
+    uploaded_by: string | null;
+    width: number;
+  },
+  row: PlaceMediaInput,
+): boolean {
+  return (
+    stored.place_internal_id === row.place_id &&
+    stored.place_area_internal_id === (row.place_area_id ?? null) &&
+    stored.media_type === row.media_type &&
+    stored.storage_key === (row.storage_key ?? null) &&
+    stored.source_url === (row.source_url ?? null) &&
+    stored.thumbnail_key === (row.thumbnail_key ?? null) &&
+    stored.width === row.width &&
+    stored.height === row.height &&
+    stored.source_type === row.source_type &&
+    stored.source_reference === (row.source_reference ?? null) &&
+    stored.rights_status === row.rights_status &&
+    datesAreEqual(stored.captured_at, row.captured_at) &&
+    stored.uploaded_by === (row.uploaded_by ?? null) &&
+    stored.alt_text === row.alt_text &&
+    stored.sort_order === row.sort_order &&
+    stored.moderation_status === row.moderation_status &&
+    stored.is_simulated === row.is_simulated
+  );
+}
+
+async function planMedia(
+  client: ImportDatabaseClient,
+  rows: readonly PlaceMediaInput[],
+  knownPlaces: ReadonlyMap<string, string>,
+  knownAreas: ReadonlyMap<string, string>,
+  draft: SummaryDraft,
+): Promise<readonly PlannedMedia[]> {
+  if (rows.length === 0) return [];
+  const existing = await client.query<{
+    alt_text: string;
+    captured_at: Date | null;
+    height: number;
+    internal_id: string;
+    is_simulated: boolean;
+    media_type: string;
+    moderation_status: string;
+    place_area_internal_id: string | null;
+    place_internal_id: string;
+    rights_status: string;
+    sort_order: number;
+    source_reference: string | null;
+    source_type: string;
+    source_url: string | null;
+    storage_key: string | null;
+    thumbnail_key: string | null;
+    uploaded_by: string | null;
+    width: number;
+  }>(
+    `SELECT media.internal_id, place.internal_id AS place_internal_id,
+            area.internal_id AS place_area_internal_id, media.media_type,
+            media.storage_key, media.source_url, media.thumbnail_key,
+            media.width, media.height, media.source_type,
+            media.source_reference, media.rights_status, media.captured_at,
+            media.uploaded_by, media.alt_text, media.sort_order,
+            media.moderation_status, media.is_simulated
+       FROM place_media AS media
+       JOIN places AS place ON place.id = media.place_id
+       LEFT JOIN place_areas AS area ON area.id = media.place_area_id
+      WHERE media.internal_id = ANY($1::text[])`,
+    [rows.map(({ media_id: mediaId }) => mediaId)],
+  );
+  const existingById = new Map(
+    existing.rows.map((row) => [row.internal_id, row]),
+  );
+  const inputSlots = new Map<string, string>();
+  const create: PlannedMedia[] = [];
+
+  for (const row of rows) {
+    const slotKey = `${row.place_id}\u0000${row.sort_order}`;
+    const slotOwner = inputSlots.get(slotKey);
+    if (slotOwner && slotOwner !== row.media_id) {
+      draft.entities.placeMedia.conflicts += 1;
+      draft.issues.push({
+        code: "duplicate_place_media_sort_order",
+        message: `Media ${slotOwner} and ${row.media_id} use sort_order=${row.sort_order} in ${row.place_id}`,
+        severity: "error",
+      });
+      continue;
+    }
+    inputSlots.set(slotKey, row.media_id);
+
+    if (!knownPlaces.has(row.place_id)) {
+      draft.entities.placeMedia.conflicts += 1;
+      draft.issues.push({
+        code: "missing_place",
+        message: `Media ${row.media_id} references unknown place ${row.place_id}`,
+        severity: "error",
+      });
+      continue;
+    }
+    if (
+      row.place_area_id &&
+      knownAreas.get(row.place_area_id) !== row.place_id
+    ) {
+      draft.entities.placeMedia.conflicts += 1;
+      draft.issues.push({
+        code: "invalid_place_area",
+        message: `Media ${row.media_id} references an unknown area or an area from another place`,
+        severity: "error",
+      });
+      continue;
+    }
+
+    const stored = existingById.get(row.media_id);
+    if (stored) {
+      if (mediaIsUnchanged(stored, row)) {
+        draft.entities.placeMedia.unchanged += 1;
+      } else {
+        draft.entities.placeMedia.conflicts += 1;
+        draft.issues.push({
+          code: "immutable_id_conflict",
+          message: `Media ${row.media_id} already exists with different content`,
+          severity: "error",
+        });
+      }
+      continue;
+    }
+
+    const persistedSlot = await client.query<{ internal_id: string }>(
+      `SELECT media.internal_id
+         FROM place_media AS media
+         JOIN places AS place ON place.id = media.place_id
+        WHERE place.internal_id = $1 AND media.sort_order = $2
+        LIMIT 1`,
+      [row.place_id, row.sort_order],
+    );
+    if (persistedSlot.rowCount) {
+      draft.entities.placeMedia.conflicts += 1;
+      draft.issues.push({
+        code: "duplicate_place_media_sort_order",
+        message: `Media slot ${row.place_id}:${row.sort_order} belongs to ${persistedSlot.rows[0].internal_id}`,
+        severity: "error",
+      });
+      continue;
+    }
+
+    create.push({ input: row });
+  }
+
+  draft.entities.placeMedia.created += create.length;
+  return create;
 }
 
 function reportIsUnchanged(
@@ -318,6 +491,7 @@ export async function planSeedRecords(
   client: ImportDatabaseClient,
   input: Readonly<{
     areas: readonly PlaceAreaInput[];
+    media: readonly PlaceMediaInput[];
     places: readonly PlaceInput[];
     reports: readonly VibeReportInput[];
   }>,
@@ -325,6 +499,7 @@ export async function planSeedRecords(
 ): Promise<SeedPlan> {
   const referencedPlaceIds = [
     ...input.areas.map(({ place_id: placeId }) => placeId),
+    ...input.media.map(({ place_id: placeId }) => placeId),
     ...input.reports.map(({ place_id: placeId }) => placeId),
   ];
   const knownPlaces = await loadKnownPlaceStatuses(client, referencedPlaceIds);
@@ -334,6 +509,13 @@ export async function planSeedRecords(
 
   const areas = await planAreas(client, input.areas, knownPlaces, draft);
   const knownAreas = await loadKnownAreas(client, input.areas);
+  const media = await planMedia(
+    client,
+    input.media,
+    knownPlaces,
+    knownAreas,
+    draft,
+  );
   const reports = await planReports(
     client,
     input.reports,
@@ -347,7 +529,7 @@ export async function planSeedRecords(
       (draft.dataTypes[report.data_type] ?? 0) + 1;
   }
 
-  return { areas, reports };
+  return { areas, media, reports };
 }
 
 export async function insertSeedRecords(
@@ -358,6 +540,7 @@ export async function insertSeedRecords(
   const resolvedPlaceIds = new Map(placeIds);
   const requiredPlaceIds = [
     ...plan.areas.map(({ input }) => input.place_id),
+    ...plan.media.map(({ input }) => input.place_id),
     ...plan.reports.map(({ input }) => input.place_id),
   ];
   if (requiredPlaceIds.length > 0) {
@@ -397,6 +580,46 @@ export async function insertSeedRecords(
       ],
     );
     areaIds.set(area.input.area_id, result.rows[0].id);
+  }
+
+  for (const media of plan.media) {
+    const row = media.input;
+    const placeId = resolvedPlaceIds.get(row.place_id);
+    if (!placeId) throw new Error(`Missing database place ${row.place_id}`);
+    const placeAreaId = row.place_area_id
+      ? areaIds.get(row.place_area_id)
+      : undefined;
+
+    await client.query(
+      `INSERT INTO place_media
+        (internal_id, place_id, place_area_id, media_type, storage_key,
+         source_url, thumbnail_key, width, height, source_type,
+         source_reference, rights_status, captured_at, uploaded_by, alt_text,
+         sort_order, moderation_status, is_simulated)
+       VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+         $15, $16, $17, $18)`,
+      [
+        row.media_id,
+        placeId,
+        placeAreaId ?? null,
+        row.media_type,
+        row.storage_key ?? null,
+        row.source_url ?? null,
+        row.thumbnail_key ?? null,
+        row.width,
+        row.height,
+        row.source_type,
+        row.source_reference ?? null,
+        row.rights_status,
+        row.captured_at ?? null,
+        row.uploaded_by ?? null,
+        row.alt_text,
+        row.sort_order,
+        row.moderation_status,
+        row.is_simulated,
+      ],
+    );
   }
 
   for (const report of plan.reports) {

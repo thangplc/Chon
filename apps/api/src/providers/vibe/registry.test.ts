@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { readProviderVibeConfig } from "@/config/provider-vibe";
-
+import { readProviderVibeConfig } from "./config";
 import { createProviderVibeRegistry } from "./registry";
 
 describe("ProviderVibeRegistry", () => {

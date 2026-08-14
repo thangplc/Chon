@@ -1,7 +1,4 @@
-import type {
-  ProviderVibeConfig,
-  ProviderVibeProvider,
-} from "@/config/provider-vibe";
+import type { ProviderVibeConfig, ProviderVibeProvider } from "./config";
 
 export type ProviderVibeAdapter = Readonly<{
   provider: ProviderVibeProvider;

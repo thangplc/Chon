@@ -1,13 +1,13 @@
-import "dotenv/config";
+import "./load-api-env.mjs";
 
 import assert from "node:assert/strict";
 
 import {
   closeDatabaseConnection,
   getDatabaseConnection,
-} from "../src/db/client";
-import { executeSpatialPlaceQuery } from "../src/features/places/data/spatial-place-query";
-import { parseSpatialPlaceQuery } from "../src/features/places/domain/spatial-query";
+} from "../src/database/client";
+import { executeSpatialPlaceQuery } from "../src/database/queries/spatial-place-query";
+import { parseSpatialPlaceQuery } from "@chon/domain/spatial-query";
 
 async function main(): Promise<void> {
   const { pool } = getDatabaseConnection();

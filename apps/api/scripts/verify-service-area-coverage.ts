@@ -1,10 +1,10 @@
-import "dotenv/config";
+import "./load-api-env.mjs";
 
 import { parseArgs } from "node:util";
 
-import { serviceAreaBoundaries } from "../src/config/service-area-boundaries";
-import { createImportDatabaseClient } from "../src/data-import/database";
-import { readVerifiedBoundarySourceObject } from "../src/service-areas/source-object";
+import { createImportDatabaseClient } from "../src/data-pipeline/import/database";
+import { serviceAreaBoundaries } from "../src/data-pipeline/service-area-boundaries";
+import { readVerifiedBoundarySourceObject } from "../src/data-pipeline/source-object";
 
 type BoundaryRow = Readonly<{
   area_type: string;

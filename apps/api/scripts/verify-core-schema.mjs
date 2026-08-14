@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 
-import "dotenv/config";
+import "./load-api-env.mjs";
 import pg from "pg";
 
 const { Client } = pg;
 
 const requiredTables = [
   "place_areas",
+  "place_media",
   "place_service_areas",
   "place_sources",
   "places",
@@ -95,6 +96,7 @@ async function verifyMetadata(client) {
     [
       [
         "places_location_gist_idx",
+        "place_media_place_id_idx",
         "provider_vibe_signals_expires_at_idx",
         "provider_vibe_signals_place_time_idx",
         "provider_vibe_signals_place_type_idx",
@@ -105,7 +107,7 @@ async function verifyMetadata(client) {
     ],
   );
 
-  assert.equal(indexes.rowCount, 7);
+  assert.equal(indexes.rowCount, 8);
   assert.match(
     indexes.rows.find(
       ({ indexname }) => indexname === "places_location_gist_idx",
@@ -197,6 +199,18 @@ async function verifyDomainRules(client) {
   );
 
   await client.query(
+    `INSERT INTO place_media
+       (internal_id, place_id, place_area_id, media_type, storage_key, width,
+        height, source_type, source_reference, rights_status, alt_text,
+        sort_order, moderation_status, is_simulated)
+     VALUES
+       ('verify_media', $1, $2, 'image', 'verify/media.svg', 1200, 800,
+        'synthetic', 'verify-seed', 'verified', 'Verify simulated cafe image',
+        0, 'approved', true)`,
+    [placeId, placeArea.rows[0].id],
+  );
+
+  await client.query(
     `INSERT INTO place_service_areas
        (place_id, service_area_id, is_primary, boundary_version)
      VALUES ($1, $2, true, 1)`,
@@ -267,6 +281,24 @@ async function verifyDomainRules(client) {
     },
     "23505",
     "service_area_boundaries_one_current_unique",
+  );
+
+  await expectDatabaseError(
+    client,
+    "invalid_media_location",
+    {
+      text: `INSERT INTO place_media
+        (internal_id, place_id, media_type, storage_key, source_url, width,
+         height, source_type, rights_status, alt_text, sort_order,
+         moderation_status)
+       VALUES
+        ('verify_bad_media', $1, 'image', 'verify/media.svg',
+         'https://example.com/media.svg', 1200, 800, 'editorial', 'verified',
+         'Invalid media', 1, 'approved')`,
+      values: [placeId],
+    },
+    "23514",
+    "place_media_exactly_one_location_check",
   );
 
   await expectDatabaseError(

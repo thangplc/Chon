@@ -3,8 +3,10 @@ import { dirname, resolve } from "node:path";
 
 import { z } from "zod";
 
-import type { ServiceAreaBoundaryDefinition } from "@/config/service-area-boundaries";
-import { sha256 } from "@/data-import/csv";
+import { sha256 } from "./import/csv";
+import type { ServiceAreaBoundaryDefinition } from "./service-area-boundaries";
+
+const workspaceRoot = resolve(process.cwd(), "../..");
 
 const manifestSchema = z.object({
   boundaryVersion: z.number().int().positive(),
@@ -28,7 +30,7 @@ export type BoundarySourceManifest = z.infer<typeof manifestSchema>;
 
 export function getBoundarySourceObjectPath(
   definition: ServiceAreaBoundaryDefinition,
-  projectRoot = process.cwd(),
+  projectRoot = workspaceRoot,
 ): string {
   return resolve(
     projectRoot,
@@ -39,7 +41,7 @@ export function getBoundarySourceObjectPath(
 
 export function getBoundarySourceManifestPath(
   definition: ServiceAreaBoundaryDefinition,
-  projectRoot = process.cwd(),
+  projectRoot = workspaceRoot,
 ): string {
   return resolve(
     dirname(getBoundarySourceObjectPath(definition, projectRoot)),
@@ -49,7 +51,7 @@ export function getBoundarySourceManifestPath(
 
 export async function readVerifiedBoundarySourceObject(
   definition: ServiceAreaBoundaryDefinition,
-  projectRoot = process.cwd(),
+  projectRoot = workspaceRoot,
 ): Promise<Readonly<{ content: string; manifest: BoundarySourceManifest }>> {
   const objectPath = getBoundarySourceObjectPath(definition, projectRoot);
   const manifestPath = getBoundarySourceManifestPath(definition, projectRoot);

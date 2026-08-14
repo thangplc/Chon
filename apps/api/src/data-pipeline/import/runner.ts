@@ -32,10 +32,12 @@ import {
 import {
   assertUniqueIds,
   validatePlaceAreas,
+  validatePlaceMedia,
   validatePlaceSources,
   validatePlaces,
   validateVibeReports,
   type PlaceAreaInput,
+  type PlaceMediaInput,
   type PlaceInput,
   type PlaceSourceInput,
   type VibeReportInput,
@@ -133,6 +135,27 @@ async function loadSeed(directory: string, draft: SummaryDraft) {
     );
   }
 
+  const mediaPath = join(directory, "place-media.csv");
+  let media: readonly PlaceMediaInput[] = [];
+  if (await fileExists(mediaPath)) {
+    const parsed = await readCsv(mediaPath);
+    draft.files.push(parsed.file);
+    media = validatePlaceMedia(parsed);
+    assertUniqueIds(media, ({ media_id: mediaId }) => mediaId, "place media");
+    draft.issues.push(
+      ...evaluateImportEnvironmentPolicy(
+        draft.environment,
+        media.map((row, index) => ({
+          entity: "place_media",
+          file: parsed.file.name,
+          identifier: row.media_id,
+          isSimulated: row.is_simulated,
+          row: index + 2,
+        })),
+      ),
+    );
+  }
+
   const fileNames = (await readdir(directory))
     .filter((fileName) => fileName.endsWith("vibe-reports.csv"))
     .sort();
@@ -158,7 +181,7 @@ async function loadSeed(directory: string, draft: SummaryDraft) {
   }
   assertUniqueIds(reports, ({ report_id: reportId }) => reportId, "report");
 
-  return { areas, places, reports };
+  return { areas, media, places, reports };
 }
 
 async function executeCommand(

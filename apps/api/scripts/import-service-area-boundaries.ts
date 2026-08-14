@@ -1,22 +1,22 @@
-import "dotenv/config";
+import "./load-api-env.mjs";
 
 import { parseArgs } from "node:util";
 
-import { serviceAreaBoundaries } from "../src/config/service-area-boundaries";
 import {
   beginImportTransaction,
   createImportDatabaseClient,
-} from "../src/data-import/database";
-import { runDataImport } from "../src/data-import/runner";
-import { printSummary } from "../src/data-import/summary";
+} from "../src/data-pipeline/import/database";
+import { runDataImport } from "../src/data-pipeline/import/runner";
+import { printSummary } from "../src/data-pipeline/import/summary";
 import type {
   ImportEnvironment,
   ImportSummary,
-} from "../src/data-import/types";
+} from "../src/data-pipeline/import/types";
 import {
   getBoundarySourceObjectPath,
   readVerifiedBoundarySourceObject,
-} from "../src/service-areas/source-object";
+} from "../src/data-pipeline/source-object";
+import { serviceAreaBoundaries } from "../src/data-pipeline/service-area-boundaries";
 
 const environments = new Set<ImportEnvironment>([
   "local",
