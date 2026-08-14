@@ -23,6 +23,7 @@
     "provider:credentials:check": "node --import tsx scripts/provider-vibe-status.ts",
     "provider:credentials:gate": "node --import tsx scripts/provider-vibe-status.ts --require-all",
     "provider:status": "node --import tsx scripts/provider-vibe-status.ts",
+    "vibe:snapshots:rebuild": "node --import tsx scripts/rebuild-vibe-snapshots.ts",
     "service-areas:import": "node --import tsx scripts/import-service-area-boundaries.ts",
     "service-areas:sync": "node --import tsx scripts/sync-service-area-boundaries.ts",
     "service-areas:verify": "node --import tsx scripts/verify-service-area-coverage.ts",

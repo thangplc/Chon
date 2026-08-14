@@ -135,3 +135,37 @@ export const placeDetailResponseSchema = z.object({
     typicalSpendMin: z.number().int().nonnegative().nullable(),
   }),
 });
+
+const vibeSnapshotSchema = z.object({
+  aggregationVersion: z.string().min(1),
+  component: z.enum(["contribution", "provider"]),
+  confidence: z.object({
+    level: z.enum(["low", "medium", "high"]),
+    score: z.number().min(0).max(1),
+  }),
+  dayType: z.enum(["weekday", "friday", "weekend"]),
+  generatedAt: z.coerce.date(),
+  isSimulated: z.boolean(),
+  lastReportAt: z.coerce.date(),
+  placeAreaId: z.string().uuid().nullable(),
+  reportCount: z.number().int().positive(),
+  scores: z.object({
+    crowd: z.number().min(1).max(5).nullable(),
+    lighting: z.number().min(1).max(5).nullable(),
+    noise: z.number().min(1).max(5).nullable(),
+    privacy: z.number().min(1).max(5).nullable(),
+    socialEnergy: z.number().min(1).max(5).nullable(),
+    workability: z.number().min(1).max(5).nullable(),
+  }),
+  sourceDataTypes: z.array(
+    z.enum(["synthetic", "research", "editorial", "community"]),
+  ),
+  timeBucket: z.enum(["morning", "midday", "afternoon", "evening", "late"]),
+});
+
+export const vibeSnapshotsResponseSchema = z.object({
+  data: z.object({
+    placeId: z.string().uuid(),
+    snapshots: z.array(vibeSnapshotSchema),
+  }),
+});

@@ -173,6 +173,13 @@ Dữ liệu tổng hợp phục vụ query nhanh:
 - Lưu riêng contribution component và provider component; API mới áp dụng fusion policy khi trả kết quả, không làm mất provenance.
 - Unique key: place + area + day type + time bucket.
 
+Snapshot v1 đã được triển khai cho `contribution`: mỗi chiều dùng median của
+report hợp lệ, lưu `source_data_types`, `is_simulated` và
+`aggregation_version`. Rebuild là thao tác dẫn xuất, idempotent và không xóa
+provider component. Confidence v1 dùng số report kết hợp mức đồng thuận giữa
+các score; weighting theo recency, location verification và contributor
+reputation được để lại cho task aggregation/confidence sau.
+
 ### `collections` và `collection_places`
 
 - Collection public/private.
@@ -221,7 +228,7 @@ GET  /api/service-areas?status=active
 GET  /api/places/:slug
 GET  /api/places/:id/media
 POST /api/vibe-reports
-GET  /api/places/:id/vibe?at=
+GET  /api/places/:slug/vibe?day_type=&time_bucket=&area_id=
 POST /api/collections
 POST /api/collections/:id/places
 GET  /api/public/collections/:slug

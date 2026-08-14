@@ -78,7 +78,7 @@ Trạng thái: **đang thực hiện** — Sprint 3 đã tiếp tục sau khi Ne
 
 - [x] Trang chi tiết địa điểm — canonical `/places/[slug]`, intercepted responsive drawer từ Explore, published-only repository, single-place map, gallery tối đa 5 ảnh có rights/provenance, simulated media CSV pipeline và loading/error/not-found/accessible focus states.
 - [x] Hiển thị giờ mở cửa, giá và khu vực trong quán — API detail trả lịch thường lệ, price/size/capacity và `place_areas`; seed importer hỗ trợ update allowlist; UI có trạng thái đủ/thiếu dữ liệu và fixture synthetic end-to-end.
-- [ ] Implement time buckets và vibe snapshots.
+- [x] Implement time buckets và vibe snapshots — chuẩn hóa 5 bucket theo timezone, snapshot contribution từ report approved, migration/API/rebuild `--dry-run` và provenance data types.
 - [ ] Viết provider adapters và normalize signal theo field/storage allowlist của từng nguồn.
 - [ ] Implement fusion policy giữa contribution component và provider component, không làm mất provenance.
 - [ ] Hiển thị vibe dimensions, report count và confidence.

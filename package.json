@@ -36,6 +36,7 @@
     "provider:status": "pnpm --filter @chon/api provider:status",
     "provider:credentials:check": "pnpm --filter @chon/api provider:credentials:check",
     "provider:credentials:gate": "pnpm --filter @chon/api provider:credentials:gate",
+    "vibe:snapshots:rebuild": "pnpm --filter @chon/api vibe:snapshots:rebuild",
     "db:check": "pnpm --filter @chon/api db:check",
     "db:down": "pnpm --filter @chon/api db:down",
     "db:generate": "pnpm --filter @chon/api db:generate",
