@@ -10,7 +10,7 @@ Ví dụ truy vấn:
 
 ## Trạng thái
 
-Dự án đã hoàn thành engineering scope của Sprint 1 và đang ở Sprint 2 — Explore map/list. Vertical slice responsive hiện đọc CSV giả lập đã import vào PostgreSQL; provider vibe vẫn tắt.
+Dự án đã hoàn thành engineering scope của Sprint 1 và Sprint 2 — Explore map/list. Vertical slice responsive hiện đọc CSV giả lập đã import vào PostgreSQL, đồng bộ map viewport với list qua spatial API, cluster marker, có trạng thái loading/error/empty và accessible list fallback; provider vibe vẫn tắt.
 
 Tài liệu nền tảng:
 
@@ -48,6 +48,15 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
+Cấu hình bản đồ local trong `.env`:
+
+```bash
+NEXT_PUBLIC_MAPTILER_API_KEY=your_browser_key
+NEXT_PUBLIC_MAPTILER_STYLE_ID=streets-v4
+```
+
+MapTiler key là browser key công khai và phải được giới hạn allowed origins trong MapTiler Cloud. Khi thiếu key, Explore fail-safe sang danh sách và không khởi tạo bản đồ.
+
 Quality checks:
 
 ```bash
@@ -79,6 +88,21 @@ pnpm data:verify
 ```
 
 Explore local không đọc CSV trực tiếp và không hard-code địa điểm/vibe trong UI. CSV trong `data/fixtures` chỉ là dữ liệu giả lập; importer validate và ghi nó vào PostgreSQL, sau đó server repository truy vấn DB để render trang.
+
+Spatial place API:
+
+```text
+GET /api/places?bbox=106.68,10.75,106.76,10.85&limit=50
+GET /api/places?lat=10.775&lng=106.700&radius=1500&limit=50
+```
+
+Chạy integration verification cho bbox/radius, service-area membership và geography index:
+
+```bash
+pnpm spatial:verify
+```
+
+Chi tiết contract và giới hạn tại [Spatial place query](docs/spatial-place-query.md).
 
 Xem quy trình migration và nguyên tắc an toàn tại [Database runbook](docs/database.md).
 

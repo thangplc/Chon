@@ -63,7 +63,7 @@ MVP nên là modular monolith. Chưa cần microservices, queue riêng hoặc ve
 - `retrieved_at`, `checksum`, `is_current`, timestamps.
 - Unique key: service area + version; chỉ một current version cho mỗi service area.
 
-GeoJSON nguồn được lưu trong S3-compatible object storage, không nằm trong repository. Runtime chỉ query geometry đã validate/simplify trong PostGIS. Cập nhật ranh giới luôn tạo version mới để có thể audit và rollback bằng cách chuyển current version, không ghi đè source object.
+GeoJSON nguồn được lưu trong S3-compatible object storage, không nằm trong repository. Local development giữ mirror bị Git ignore tại `data/source-objects/<source_storage_key>`; production phải upload đúng artifact/checksum này trước khi import. Runtime chỉ query geometry đã validate/simplify trong PostGIS. Cập nhật ranh giới luôn tạo version mới để có thể audit và rollback bằng cách chuyển current version, không ghi đè source object.
 
 ### `place_service_areas`
 
@@ -201,7 +201,8 @@ Luôn hiển thị số report và thời điểm cập nhật gần nhất cạ
 ## 6. API surface dự kiến
 
 ```text
-GET  /api/places?bbox=&purpose=&at=&filters=
+GET  /api/places?bbox=west,south,east,north&limit=
+GET  /api/places?lat=&lng=&radius=&limit=
 GET  /api/service-areas?status=active
 GET  /api/places/:slug
 GET  /api/places/:id/media

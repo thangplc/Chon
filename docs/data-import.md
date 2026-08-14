@@ -99,21 +99,50 @@ Quy tắc mapping:
 
 ## Boundary
 
-Ví dụ:
+Ba service area MVP được khai báo tập trung trong `src/config/service-area-boundaries.ts`:
+
+| Service area | OSM relation | Storage key |
+|---|---:|---|
+| Quận 1 | `2587287` | `boundaries/osm/hcm-q1/v1/boundary.geojson` |
+| Quận 3 | `3819816` | `boundaries/osm/hcm-q3/v1/boundary.geojson` |
+| Bình Thạnh | `3797166` | `boundaries/osm/hcm-binh-thanh/v1/boundary.geojson` |
+
+Từ ngày 01/07/2025, ba quận không còn là đơn vị hành chính hiện hành. OSM giữ các relation này với `type=historic` và `end_date=2025-06-30`. Chốn dùng chúng như **vùng phục vụ sản phẩm** đang active, đồng thời lưu `area_type=historic_district` để không diễn giải sai trạng thái hành chính.
+
+Workflow local/staging:
+
+```bash
+# Tải snapshot đã simplify từ Nominatim; lần sau reuse file cùng version.
+pnpm service-areas:sync
+
+# Validate cả ba source object, geometry và kế hoạch membership; không ghi DB.
+pnpm service-areas:import --dry-run
+
+# Import atomically và kích hoạt current boundary.
+pnpm service-areas:import
+
+# Đối chiếu source checksum/provenance, PostGIS và ST_Covers membership.
+pnpm service-areas:verify
+```
+
+`service-areas:sync` dùng `polygon_threshold=0.00005` độ (xấp xỉ 5,5 m), kiểm tra relation/name/type/end date và tạo một manifest có checksum cho mỗi GeoJSON. Source object local nằm dưới `data/source-objects/<storage-key>` và bị loại khỏi Git. Nếu muốn cập nhật ranh giới, phải tăng `version` và đổi storage key trong catalog; script không ghi đè snapshot đã tồn tại.
+
+Có thể gọi boundary importer cấp thấp cho một boundary riêng lẻ:
 
 ```bash
 pnpm data:import boundary \
-  --file path/to/hcm-q1.geojson \
+  --file data/source-objects/boundaries/osm/hcm-q1/v1/boundary.geojson \
   --code hcm-q1 \
   --name "Quận 1" \
   --version 1 \
   --current \
-  --source-storage-key boundaries/osm/hcm-q1/v1.geojson \
-  --source-name OpenStreetMap \
-  --source-relation-id 2778323 \
-  --source-url https://www.openstreetmap.org/relation/2778323 \
+  --area-type historic_district \
+  --source-storage-key boundaries/osm/hcm-q1/v1/boundary.geojson \
+  --source-name "OpenStreetMap via Nominatim" \
+  --source-relation-id 2587287 \
+  --source-url https://www.openstreetmap.org/relation/2587287 \
   --source-license ODbL-1.0 \
-  --retrieved-at 2026-08-13T09:00:00+07:00 \
+  --retrieved-at <manifest.retrievedAt> \
   --dry-run
 ```
 
@@ -126,7 +155,7 @@ Boundary importer:
 - khi `--current`, tắt current version cũ và tính lại `place_service_areas`;
 - có thể kích hoạt lại version cũ nếu checksum và source metadata khớp.
 
-GeoJSON nguồn phải được upload vào object storage riêng; `--source-storage-key` chỉ lưu key bất biến trong database.
+Trước production import, upload **đúng file có checksum trong manifest** vào S3-compatible object storage bằng `source_storage_key` đã khai báo. Database chỉ lưu key bất biến và provenance; file local chỉ là mirror phục vụ development, không thay thế durable production storage.
 
 ## Exit code và an toàn
 
@@ -143,3 +172,5 @@ pnpm data:verify
 ```
 
 Integration verification chạy boundary → POI/provider mapping → place area → vibe report; kiểm tra spatial membership, provenance update, ownership conflict và idempotence, sau đó rollback toàn bộ dữ liệu test.
+
+`pnpm service-areas:verify` là verification dành riêng cho ba vùng MVP đang active. Command fail nếu source object khác checksum DB, provenance/version/geometry sai, membership khác kết quả `ST_Covers`, hoặc fixture mang nhãn quận mục tiêu không được cover đúng vùng.

@@ -59,13 +59,14 @@ Foundation, schema, importer, environment guards và CI đã được verify. UI
 
 ## Sprint 2 — Explore map/list
 
-Trạng thái: **in progress** — vertical slice đầu tiên dùng pipeline CSV giả lập → PostgreSQL → server repository; chưa gọi provider vibe và chưa tích hợp MapLibre thật.
+Trạng thái: **hoàn thành ngày 2026-08-14** — vertical slice dùng pipeline CSV giả lập → PostgreSQL → server repository; MapLibre/geolocation, clustering, ba service-area boundary và accessible list fallback đã hoạt động; chưa gọi provider vibe.
 
-- [ ] Tích hợp bản đồ và geolocation có xin quyền rõ ràng.
-- [ ] Query địa điểm theo bounding box/bán kính.
-- [ ] Đồng bộ map và list trên mobile.
-- [ ] Cluster marker và tạo trạng thái loading/error/empty.
-- [ ] Làm fallback dạng danh sách accessible.
+- [x] Tích hợp bản đồ và geolocation có xin quyền rõ ràng — MapLibre + MapTiler config fail-safe, marker từ tọa độ DB và permission flow chỉ chạy sau thao tác người dùng.
+- [x] Import và kích hoạt boundary Quận 1, Quận 3 và Bình Thạnh — OSM relation `2587287`/`3819816`/`3797166`, source manifest/checksum/storage key, current boundary v1 và `place_service_areas` đã verify pass 12/12 fixture (4 mỗi vùng).
+- [x] Query địa điểm theo bounding box/bán kính — `GET /api/places` validate hai spatial mode, chỉ lấy published place trong active/current service area, hỗ trợ meter-accurate radius, bounded limit/`hasMore` và geography GiST index; integration verification đã pass.
+- [x] Đồng bộ map và list trên mobile — `moveend` gọi bbox API để lọc list, giữ rank marker/card, marker chọn và scroll tới card, card chọn và focus map; mobile dùng bottom sheet cuộn độc lập, API lỗi fallback về danh sách accessible.
+- [x] Cluster marker và tạo trạng thái loading/error/empty — GeoJSON source dùng MapLibre native clustering; cluster click để zoom, marker đơn giữ rank/selection; map và viewport list có loading, retryable error, empty state cùng fallback không làm mất dữ liệu.
+- [x] Làm fallback dạng danh sách accessible — skip-link bỏ qua map, semantic result region/list, keyboard focus, trạng thái chọn không phụ thuộc màu, live announcements và tự khôi phục danh sách đầy đủ khi map thiếu cấu hình hoặc lỗi.
 
 ### Demo
 
