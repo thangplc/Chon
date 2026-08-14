@@ -11,6 +11,7 @@
 
 # Tests and tooling
 /coverage/
+/data/source-objects/
 *.tsbuildinfo
 
 # Environment and logs
