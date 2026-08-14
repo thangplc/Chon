@@ -1,6 +1,6 @@
 # Tech stack đề xuất: Chốn MVP
 
-Trạng thái: **core stack approved; provider architecture approved ngày 2026-08-13; hosting/auth vendor chưa chốt**.
+Trạng thái: **core stack approved; NestJS backend cutover hoàn thành ngày 2026-08-14; hosting/auth vendor chưa chốt**.
 
 ## 1. Mục tiêu kỹ thuật
 
@@ -16,7 +16,8 @@ Trạng thái: **core stack approved; provider architecture approved ngày 2026-
 | Lớp | Lựa chọn | Lý do |
 |---|---|---|
 | Runtime | Node.js LTS | Hệ sinh thái ổn định, dùng chung TypeScript |
-| Web framework | Next.js + TypeScript | Full-stack trong một repo, phù hợp modular monolith |
+| Web framework | Next.js + TypeScript | React UI, App Router và server-side rendering |
+| Backend API | NestJS + REST/OpenAPI | API/auth/jobs boundary độc lập, modular và type-safe |
 | Styling | Tailwind CSS | Tốc độ triển khai UI và responsive |
 | UI primitives | Radix UI hoặc tương đương | Accessibility cho dialog, menu, form |
 | Map renderer | MapLibre GL JS | Tùy biến style/layer, WebGL, không khóa vào renderer độc quyền |
@@ -32,23 +33,24 @@ Trạng thái: **core stack approved; provider architecture approved ngày 2026-
 
 ## 3. Kiến trúc ứng dụng
 
-Sử dụng modular monolith trong một repository:
+Sử dụng modular monolith trong pnpm workspace với hai deployable runtime.
+Next.js nằm tại `apps/web`, NestJS tại `apps/api`; code dùng chung được tách theo
+ownership trong `packages/*`.
 
 ```text
-src/
-  app/              # routes và UI composition
-  features/
-    places/
-    explore/
-    vibe/
-    collections/
-  db/               # schema, migrations, queries
-  domain/           # ranking, aggregation, confidence
-  lib/              # shared infrastructure
-  components/       # shared UI primitives
+apps/
+  web/              # Next.js, UI, map assets và frontend tooling
+  api/              # NestJS, DB, Drizzle, importer và backend tooling
+packages/
+  contracts/        # Zod transport contracts
+  domain/           # pure business rules
 scripts/
-  data/             # validate/import/sync, không phải Admin UI
+  dev-stack.mjs     # workspace orchestration duy nhất
 ```
+
+Code chỉ dùng bởi một runtime phải nằm trong app sở hữu. `packages/*` chỉ dành
+cho contract/domain thực sự dùng qua ranh giới web–API và không chứa hạ tầng
+database hay provider credential.
 
 Các thuật toán ranking, aggregation và confidence phải nằm trong domain functions độc lập để test mà không cần browser/database.
 
@@ -136,8 +138,8 @@ Không commit boundary GeoJSON vào repository. Boundary importer phải có dry
 - Local: PostgreSQL 17 + PostGIS 3.5 qua `postgis/postgis:17-3.5-alpine` và Docker Compose.
 - Runtime: Drizzle ORM + `node-postgres` connection pool.
 - Migration: Drizzle Kit, SQL migration có journal và snapshot được commit.
-- Cấu hình: chỉ dùng các biến `DATABASE_*` rời trong `.env`; không yêu cầu `DATABASE_URL`.
-- Migration đầu tiên bật `postgis` bằng câu lệnh idempotent; các bảng nghiệp vụ được tạo ở task Sprint 1 kế tiếp.
+- Cấu hình: chỉ dùng các biến `DATABASE_*` rời trong `apps/api/.env`; không yêu cầu `DATABASE_URL` và không đưa database credential sang env của web.
+- Migration `0000`–`0006` hiện tạo PostGIS cùng chín bảng core, bao gồm `place_media`.
 - Không cung cấp script reset/xóa volume. Database change ở môi trường dùng chung dùng forward-fix migration.
 
 Raw reports và aggregated snapshots phải tách riêng:
@@ -162,7 +164,8 @@ Natural-language search là P1: LLM chỉ chuyển câu người dùng thành fi
 
 ### Đề xuất ban đầu
 
-- Web/API: nền tảng managed hỗ trợ Next.js.
+- Web: nền tảng managed hỗ trợ Next.js.
+- API: managed Node.js runtime/container hỗ trợ tiến trình NestJS dài hạn.
 - Database: managed PostgreSQL có PostGIS.
 - Ảnh và GeoJSON nguồn của service area: S3-compatible object storage.
 - DNS/CDN/WAF: chọn cùng hoặc tách tùy chi phí.

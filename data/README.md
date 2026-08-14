@@ -8,6 +8,7 @@ Thư mục này chứa dữ liệu phục vụ phát triển và các template t
 data/
   fixtures/
     places.csv
+    place-media.csv
     synthetic-vibe-reports.csv
     simulated-research-vibe-reports.csv
     simulated-editorial-vibe-reports.csv
@@ -18,7 +19,7 @@ data/
     community-vibe-reports.csv
 ```
 
-Toàn bộ địa điểm và report trong `fixtures/` là hư cấu. Chúng chỉ dùng cho local, CI, staging và prototype.
+Toàn bộ địa điểm, media và report trong `fixtures/` là hư cấu. Chúng chỉ dùng cho local, CI, staging và prototype. Metadata media nằm trong `place-media.csv`; năm SVG minh họa nằm tại `public/place-media/synthetic/` và không được trình bày như ảnh quán thật.
 
 Explore local dùng pipeline:
 
@@ -26,7 +27,7 @@ Explore local dùng pipeline:
 CSV giả lập → validation/importer → PostgreSQL → server repository → UI
 ```
 
-UI không import CSV và không chứa constant địa điểm/vibe. Việc lưu fixture vào DB chỉ nhằm test luồng dữ liệu thật của ứng dụng; không làm cho dữ liệu giả lập trở thành dữ liệu production.
+UI không import CSV và không chứa constant địa điểm/media/vibe. Việc lưu fixture vào DB chỉ nhằm test luồng dữ liệu thật của ứng dụng; không làm cho dữ liệu giả lập trở thành dữ liệu production.
 
 Các fixture mô phỏng `research`, `editorial`, `community` giữ đúng giá trị `data_type` để test workflow, nhưng luôn có:
 

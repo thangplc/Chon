@@ -74,7 +74,9 @@ Người dùng xem và chọn quán trong ba quận mục tiêu.
 
 ## Sprint 3 — Place detail và vibe data
 
-- [ ] Trang chi tiết địa điểm.
+Trạng thái: **paused ngày 2026-08-14; chờ review sau backend migration** — vertical slice Place Detail đã hoàn thành và NestJS cutover gate đã pass. Scope còn lại sẽ được review, điều chỉnh nếu cần và chỉ tiếp tục khi được duyệt lại.
+
+- [x] Trang chi tiết địa điểm — canonical `/places/[slug]`, intercepted responsive drawer từ Explore, published-only repository, single-place map, gallery tối đa 5 ảnh có rights/provenance, simulated media CSV pipeline và loading/error/not-found/accessible focus states.
 - [ ] Hiển thị giờ mở cửa, giá và khu vực trong quán.
 - [ ] Implement time buckets và vibe snapshots.
 - [ ] Viết provider adapters và normalize signal theo field/storage allowlist của từng nguồn.
@@ -85,6 +87,18 @@ Người dùng xem và chọn quán trong ba quận mục tiêu.
 ### Demo
 
 Trang quán thay đổi vibe khi chọn thời gian dự định ghé.
+
+## Architecture interlude — Backend extraction
+
+Trạng thái: **hoàn thành ngày 2026-08-14**.
+
+- [x] Khởi tạo NestJS REST API trong pnpm workspace.
+- [x] Giữ Drizzle ORM, PostgreSQL/PostGIS và migration history hiện tại.
+- [x] Chuyển spatial places, Explore dataset và Place Detail read path sang API.
+- [x] Next.js chỉ còn web rendering và same-origin API proxy, không query DB trong request path.
+- [x] Bổ sung OpenAPI, API tests, CI/build và cutover verification.
+
+Chi tiết phase, boundary và gate: `docs/backend-extraction-plan.md`.
 
 ## Sprint 4 — Discovery và ranking
 

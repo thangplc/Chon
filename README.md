@@ -10,7 +10,7 @@ Ví dụ truy vấn:
 
 ## Trạng thái
 
-Dự án đã hoàn thành engineering scope của Sprint 1 và Sprint 2 — Explore map/list. Vertical slice responsive hiện đọc CSV giả lập đã import vào PostgreSQL, đồng bộ map viewport với list qua spatial API, cluster marker, có trạng thái loading/error/empty và accessible list fallback; provider vibe vẫn tắt.
+Dự án đã hoàn thành engineering scope của Sprint 1, Sprint 2 và đợt tách backend. Next.js hiện chịu trách nhiệm web rendering; NestJS sở hữu REST API và truy cập PostgreSQL/PostGIS qua Drizzle. Sprint 3 đang tạm dừng sau vertical slice Place Detail để review lại scope trên kiến trúc mới; provider vibe vẫn tắt.
 
 Tài liệu nền tảng:
 
@@ -32,6 +32,11 @@ Tài liệu chi tiết hỗ trợ:
 - [Data contract](docs/data-contract.md)
 - [Data operations](docs/data-operations.md)
 - [Data importer runbook](docs/data-import.md)
+- [Backend extraction plan và kết quả cutover](docs/backend-extraction-plan.md)
+- [ADR: tách NestJS backend](docs/adr/0001-separate-nest-backend.md)
+- [Cấu trúc repository và dependency rules](docs/repository-structure.md)
+- [Frontend README](apps/web/README.md)
+- [Backend README](apps/api/README.md)
 
 Prototype để review:
 
@@ -45,14 +50,28 @@ Yêu cầu Node.js `>=20.9.0` và pnpm `9.10.0`.
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm dev
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+pnpm db:up
+pnpm db:migrate
+pnpm dev:stack
 ```
 
-Cấu hình bản đồ local trong `.env`:
+`pnpm dev:stack` chạy Next.js tại `http://localhost:3000` và NestJS API tại
+`http://localhost:3001`. Có thể chạy riêng từng runtime bằng `pnpm dev` và
+`pnpm api:dev`.
+
+Production source được tách thành `apps/web` và `apps/api`. Shared code nằm
+trong `packages/*`; toàn bộ migration, database schema, data pipeline, provider
+registry và operator scripts thuộc `apps/api`. Root chỉ giữ workspace
+orchestration, shared data/docs và prototype.
+
+Cấu hình browser map và URL backend local trong `apps/web/.env`:
 
 ```bash
 NEXT_PUBLIC_MAPTILER_API_KEY=your_browser_key
 NEXT_PUBLIC_MAPTILER_STYLE_ID=streets-v4
+BACKEND_API_URL=http://127.0.0.1:3001
 ```
 
 MapTiler key là browser key công khai và phải được giới hạn allowed origins trong MapTiler Cloud. Khi thiếu key, Explore fail-safe sang danh sách và không khởi tạo bản đồ.
@@ -64,10 +83,10 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
+pnpm build:all
 ```
 
-GitHub Actions chạy `typecheck`, `lint` và `test` trên mọi push, pull request và khi kích hoạt thủ công. Workflow dùng Node.js 22, pnpm `9.10.0`, frozen lockfile và cache pnpm.
+GitHub Actions chạy `typecheck`, `lint`, `test` và build độc lập cả web/API trên mọi push, pull request và khi kích hoạt thủ công. Workflow dùng Node.js 22, pnpm `9.10.0`, frozen lockfile và cache pnpm.
 
 Kiểm tra trạng thái feature flag, production gate và credential của các provider vibe mà không gọi API:
 
@@ -78,7 +97,7 @@ pnpm provider:status
 Local database:
 
 ```bash
-cp .env.example .env
+cp apps/api/.env.example apps/api/.env
 pnpm db:up
 pnpm db:migrate
 pnpm db:verify
@@ -87,7 +106,21 @@ pnpm data:import seed --dir data/fixtures --environment local
 pnpm data:verify
 ```
 
-Explore local không đọc CSV trực tiếp và không hard-code địa điểm/vibe trong UI. CSV trong `data/fixtures` chỉ là dữ liệu giả lập; importer validate và ghi nó vào PostgreSQL, sau đó server repository truy vấn DB để render trang.
+NestJS, Drizzle, Docker Compose và các data/operator script cùng đọc
+`apps/api/.env`. Next.js chỉ đọc `apps/web/.env`; không đặt database credential
+hoặc provider token trong env của web. Nếu đang nâng cấp từ cấu trúc root
+`.env` cũ, chạy một lần `pnpm env:split` để phân loại và di chuyển các giá trị
+mà không ghi secret ra terminal.
+
+Explore và Place Detail local không đọc CSV trực tiếp, không hard-code địa điểm/media/vibe trong UI. CSV trong `data/fixtures` chỉ là dữ liệu giả lập; importer validate và ghi nó vào PostgreSQL, sau đó NestJS API truy vấn DB và Next.js đọc response đã validate để render trang.
+
+Place Detail dùng canonical URL và chỉ trả địa điểm `published`:
+
+```text
+GET /places/goc-may-01
+```
+
+Khi điều hướng từ Explore trên tablet/desktop, App Router intercept URL này thành drawer. Truy cập trực tiếp hoặc refresh vẫn render full page. Gallery chỉ lấy tối đa 5 media `approved` có rights hợp lệ; fixture SVG luôn được gắn nhãn simulated và provenance.
 
 Spatial place API:
 
@@ -95,6 +128,10 @@ Spatial place API:
 GET /api/places?bbox=106.68,10.75,106.76,10.85&limit=50
 GET /api/places?lat=10.775&lng=106.700&radius=1500&limit=50
 ```
+
+Hai URL `/api/places` là same-origin proxy dành cho browser. API canonical nằm
+ở `/v1/places` trên NestJS; health, Swagger UI và OpenAPI lần lượt ở
+`/v1/health`, `/docs` và `/openapi.json`.
 
 Chạy integration verification cho bbox/radius, service-area membership và geography index:
 

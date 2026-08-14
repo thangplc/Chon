@@ -27,7 +27,10 @@ Kiểm tra trạng thái hiệu lực mà không gọi API hoặc in secret:
 pnpm provider:status
 ```
 
-Registry tại `src/providers/vibe/registry.ts` khởi tạo adapter theo kiểu lazy. Provider tắt không được khởi tạo; ingest bật nhưng thiếu credential làm config fail ngay; adapter chưa được implement/đăng ký sẽ bị từ chối thay vì âm thầm bỏ qua.
+Registry tại `apps/api/src/providers/vibe/registry.ts` khởi tạo adapter theo kiểu
+lazy. Provider tắt không được khởi tạo; ingest bật nhưng thiếu credential làm
+config fail ngay; adapter chưa được implement/đăng ký sẽ bị từ chối thay vì âm
+thầm bỏ qua.
 
 ## Credential audit
 

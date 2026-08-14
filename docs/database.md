@@ -8,11 +8,19 @@
 - Drizzle Kit cho migration SQL có version.
 - Docker Compose cho local development.
 
+Canonical schema nằm trong `apps/api/src/database/schema`. SQL migration,
+snapshot và journal nằm tại `apps/api/drizzle`; đây chỉ là thay đổi ownership
+trong repository, không sửa nội dung hoặc thứ tự migration đã áp dụng.
+
 Image local được pin ở `postgis/postgis:17-3.5-alpine`. Upstream hiện chỉ phát hành image này cho `linux/amd64`, vì vậy Docker Desktop dùng emulation trên Apple Silicon. Không đổi sang image PostGIS không chính thức chỉ để tránh emulation.
 
 ## Cấu hình local
 
-Tạo `.env` từ `.env.example` và chỉ dùng các biến rời:
+Tạo `apps/api/.env` từ `apps/api/.env.example` và chỉ dùng các biến rời:
+
+```bash
+cp apps/api/.env.example apps/api/.env
+```
 
 ```text
 DATABASE_HOST
@@ -25,7 +33,11 @@ DATABASE_SSL
 DATABASE_POOL_MAX
 ```
 
-Không commit `.env` hoặc tạo thêm `.env.local`. Cấu hình mặc định dùng cổng PostgreSQL chuẩn `5432`. Nếu máy đang có database khác dùng cổng này, chỉ đổi `DATABASE_PORT` trong `.env` local; không sửa `.env.example` và không dừng database ngoài phạm vi Chốn.
+Không commit `apps/api/.env`, tạo `.env.local` hoặc đặt database credential trong
+`apps/web/.env`. Cấu hình mặc định dùng cổng PostgreSQL chuẩn `5432`. Nếu máy
+đang có database khác dùng cổng này, chỉ đổi `DATABASE_PORT` trong
+`apps/api/.env`; không sửa file example và không dừng database ngoài phạm vi
+Chốn.
 
 ## Khởi động và migrate
 
@@ -54,7 +66,7 @@ Không thêm command xóa volume vào script dự án. Mọi thao tác xóa/rese
 
 Migration đầu tiên `0000_enable_postgis.sql` bật extension bằng `CREATE EXTENSION IF NOT EXISTS postgis`. Câu lệnh vẫn an toàn với provider hoặc Docker image đã bật PostGIS trước đó.
 
-Local foundation được xác minh ngày 2026-08-13: container healthy trên cổng `5432`, migration chạy lặp lại an toàn, journal có năm migration và PostGIS thực thi được `Point`/`MultiPolygon` SRID 4326.
+Local foundation được xác minh trên cổng `5432`; journal hiện có bảy migration (`0000`–`0006`) và PostGIS thực thi được `Point`/`MultiPolygon` SRID 4326.
 
 Core schema hiện có:
 
@@ -64,6 +76,7 @@ Core schema hiện có:
 - `place_sources` lưu provenance và mapping ID giữa canonical place với provider.
 - `provider_vibe_signals` lưu tín hiệu bên thứ ba tách khỏi report Chốn, với storage policy, TTL, attribution, mapping version, confidence và tối đa sáu dimension estimate.
 - `vibe_reports` lưu sáu chiều vibe và ràng buộc riêng cho bốn `data_type`.
+- `place_media` lưu tối đa năm media active theo place với rights/provenance và simulated-data guard.
 
 Chạy integration verification sau khi migrate:
 
@@ -71,7 +84,7 @@ Chạy integration verification sau khi migrate:
 pnpm db:verify
 ```
 
-Verification kiểm tra tám bảng, SRID/geometry type, GiST/partial unique indexes, spatial coverage và các constraint cốt lõi. Với provider signal, script kiểm tra `reference_only`, `persist_allowed`, mapping version và foreign key buộc source/place cùng provenance. Dữ liệu kiểm thử được chạy trong transaction rồi rollback, không để lại fixture trong database.
+Verification kiểm tra chín bảng, SRID/geometry type, GiST/partial unique indexes, spatial coverage và các constraint cốt lõi. Với provider signal, script kiểm tra `reference_only`, `persist_allowed`, mapping version và foreign key buộc source/place cùng provenance; với media, script kiểm tra storage/source exclusivity và quyền hiển thị. Dữ liệu kiểm thử được chạy trong transaction rồi rollback, không để lại fixture trong database.
 
 Khi thay đổi schema:
 
