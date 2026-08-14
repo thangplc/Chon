@@ -1,3 +1,4 @@
+// Shared PostGIS column types for API and migration tooling.
 import { customType } from "drizzle-orm/pg-core";
 import { parseEWKB } from "drizzle-orm/pg-core/columns/postgis_extension/utils";
 

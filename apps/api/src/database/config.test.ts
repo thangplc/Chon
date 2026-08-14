@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readDatabaseConfig } from "./database";
+import { readDatabaseConfig } from "./config";
 
 const validEnvironment = {
   DATABASE_HOST: "127.0.0.1",

@@ -1,3 +1,4 @@
+// Canonical service-area and boundary schema.
 import { sql } from "drizzle-orm";
 import {
   AnyPgColumn,

@@ -1,3 +1,4 @@
+// Canonical service-area membership schema.
 import { sql } from "drizzle-orm";
 import {
   boolean,

@@ -1,3 +1,4 @@
+// Canonical place schema owned by the backend application.
 import { sql } from "drizzle-orm";
 import {
   boolean,

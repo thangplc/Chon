@@ -1,3 +1,4 @@
+// Canonical provider vibe signal schema.
 import { sql } from "drizzle-orm";
 import {
   check,

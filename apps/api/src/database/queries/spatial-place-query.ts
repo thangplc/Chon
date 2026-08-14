@@ -1,6 +1,6 @@
 import type { QueryResultRow } from "pg";
 
-import type { SpatialPlaceQuery } from "../domain/spatial-query";
+import type { SpatialPlaceQuery } from "../../../../../packages/domain/src/places/spatial-query";
 
 export type SpatialPlace = Readonly<{
   address: string;

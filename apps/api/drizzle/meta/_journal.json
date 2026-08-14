@@ -43,6 +43,13 @@
       "when": 1786682979416,
       "tag": "0005_add_places_geography_index",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786695376751,
+      "tag": "0006_create_place_media",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,8 @@
-import "dotenv/config";
+import "./scripts/load-api-env.mjs";
 
 import { defineConfig } from "drizzle-kit";
 
-import { readDatabaseConfig } from "./src/config/database";
+import { readDatabaseConfig } from "./src/database/config";
 
 const database = readDatabaseConfig();
 
@@ -21,7 +21,7 @@ export default defineConfig({
     table: "__drizzle_migrations",
   },
   out: "./drizzle",
-  schema: "./src/db/schema/index.ts",
+  schema: "./src/database/schema/index.ts",
   strict: true,
   verbose: true,
 });

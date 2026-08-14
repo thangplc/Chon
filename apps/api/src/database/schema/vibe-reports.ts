@@ -1,3 +1,4 @@
+// Canonical first-party vibe report schema.
 import { sql } from "drizzle-orm";
 import {
   boolean,

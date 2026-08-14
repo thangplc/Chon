@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { SpatialPlaceQuery } from "../domain/spatial-query";
+import type { SpatialPlaceQuery } from "../../../../../packages/domain/src/places/spatial-query";
 import {
   buildSpatialPlaceQuery,
   executeSpatialPlaceQuery,

@@ -1,3 +1,4 @@
+// Shared by the NestJS API and operator tooling.
 import { pgEnum } from "drizzle-orm/pg-core";
 
 export const dataTypeEnum = pgEnum("data_type", [
@@ -23,6 +24,22 @@ export const moderationStatusEnum = pgEnum("moderation_status", [
   "rejected",
   "archived",
 ]);
+
+export const mediaRightsStatusEnum = pgEnum("media_rights_status", [
+  "verified",
+  "provider_allowed",
+  "pending",
+  "rejected",
+]);
+
+export const mediaSourceTypeEnum = pgEnum("media_source_type", [
+  "provider",
+  "editorial",
+  "community",
+  "synthetic",
+]);
+
+export const mediaTypeEnum = pgEnum("media_type", ["image"]);
 
 export const placeStatusEnum = pgEnum("place_status", [
   "draft",

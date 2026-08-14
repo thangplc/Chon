@@ -1,14 +1,13 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import { readDatabaseConfig } from "@/config/database";
-
+import { readDatabaseConfig } from "./config";
 import * as schema from "./schema";
 
 function createDatabaseConnection() {
   const config = readDatabaseConfig();
   const pool = new Pool({
-    application_name: "chon-web",
+    application_name: "chon-operator",
     connectionTimeoutMillis: 5_000,
     database: config.name,
     host: config.host,
