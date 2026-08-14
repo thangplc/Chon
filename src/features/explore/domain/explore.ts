@@ -88,7 +88,6 @@ const purposeTargets: Readonly<Record<PurposeId, VibeScores>> = {
 export type ExplorePlace = ExploreSourcePlace &
   Readonly<{
     confidence: "insufficient" | "low" | "medium";
-    mapPosition: Readonly<{ x: number; y: number }>;
     matchScore: number | null;
     reportCount: number;
     vibe: VibeScores | null;
@@ -112,25 +111,6 @@ function averageScores(
         reports.length,
     ]),
   ) as unknown as VibeScores;
-}
-
-function mapPosition(
-  place: ExploreSourcePlace,
-  places: readonly ExploreSourcePlace[],
-): Readonly<{ x: number; y: number }> {
-  const longitudes = places.map(({ longitude }) => longitude);
-  const latitudes = places.map(({ latitude }) => latitude);
-  const minimumLongitude = Math.min(...longitudes);
-  const maximumLongitude = Math.max(...longitudes);
-  const minimumLatitude = Math.min(...latitudes);
-  const maximumLatitude = Math.max(...latitudes);
-  const longitudeRange = maximumLongitude - minimumLongitude || 1;
-  const latitudeRange = maximumLatitude - minimumLatitude || 1;
-
-  return {
-    x: 12 + ((place.longitude - minimumLongitude) / longitudeRange) * 76,
-    y: 12 + ((maximumLatitude - place.latitude) / latitudeRange) * 76,
-  };
 }
 
 function calculateMatchScore(vibe: VibeScores, purpose: PurposeId): number {
@@ -171,7 +151,6 @@ export function getExplorePlaces(
               ? "low"
               : "medium",
         matchScore: vibe ? calculateMatchScore(vibe, filters.purpose) : null,
-        mapPosition: mapPosition(place, dataset.places),
         reportCount: relevantReports.length,
         vibe,
       };
