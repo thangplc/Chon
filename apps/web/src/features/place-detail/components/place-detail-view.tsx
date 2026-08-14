@@ -1,6 +1,7 @@
 import type { PlaceDetail } from "../domain/place-detail";
 import { PlaceDetailBackControl } from "./place-detail-back-control";
 import { PlaceDetailMap } from "./place-detail-map";
+import { PlaceFacts } from "./place-facts";
 import { PlaceGallery } from "./place-gallery";
 
 type PlaceDetailViewProps = Readonly<{
@@ -65,14 +66,7 @@ export function PlaceDetailView({
               mapStyleUrl={mapStyleUrl}
               name={place.name}
             />
-            <section className="rounded-[1.5rem] border border-[#173f33]/10 bg-white/75 p-5 shadow-sm">
-              <h2 className="text-lg font-bold">Thông tin trong Sprint 3</h2>
-              <p className="mt-2 text-sm leading-6 text-[#5e746a]">
-                Giờ mở cửa, mức giá, khu vực trong quán và vibe theo thời gian
-                sẽ được bổ sung ở các task tiếp theo. Trang này không tự suy
-                đoán dữ liệu còn thiếu.
-              </p>
-            </section>
+            <PlaceFacts place={place} />
           </div>
         </div>
       </div>

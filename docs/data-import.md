@@ -41,7 +41,7 @@ Thêm `--json` để lấy summary máy đọc được:
 pnpm data:import seed --dir data/fixtures --dry-run --json
 ```
 
-Summary chứa import ID, contract version, checksum từng file, environment, operator, create/update/unchanged/conflict/reject, warning và phân bố `data_type`. Dry-run có `Database writes: 0`.
+Summary chứa import ID, contract version, checksum từng file, environment, operator, create/update/unchanged/conflict/reject, warning và phân bố `data_type`. Dry-run có `Database writes: 0`. `opening_hours` được parse và kiểm tra theo contract lịch thường lệ v1 trước khi lập kế hoạch ghi.
 
 Có thể kiểm tra production policy an toàn bằng dry-run trước khi import thật:
 
@@ -64,7 +64,7 @@ pnpm data:import poi \
 pnpm data:import seed --dir path/to/seed-directory
 ```
 
-Import thật chạy trong transaction `SERIALIZABLE` và dùng advisory lock để ngăn hai data import chạy đồng thời. Một lỗi sẽ rollback toàn bộ batch. Stable CSV IDs được map qua `internal_id`, vì vậy chạy lại cùng artifact trả về `unchanged` thay vì tạo duplicate. Cùng ID nhưng nội dung khác được báo conflict và không tự ghi đè.
+Import thật chạy trong transaction `SERIALIZABLE` và dùng advisory lock để ngăn hai data import chạy đồng thời. Một lỗi sẽ rollback toàn bộ batch. Stable CSV IDs được map qua `internal_id`, vì vậy chạy lại cùng artifact trả về `unchanged` thay vì tạo duplicate. Cùng ID nhưng thay đổi identity, vị trí, trạng thái hoặc simulation flag được báo conflict; các field chi tiết được allowlist (`price`, `currency`, `size`, `capacity`, `opening_hours`) được cập nhật idempotent khi CSV có giá trị không rỗng. Field tùy chọn bị bỏ trống được giữ nguyên trên place hiện hữu; importer hiện chưa có cú pháp clear field có chủ đích.
 
 ### Fixture cho Explore local
 
@@ -75,6 +75,8 @@ data/fixtures/*.csv → seed importer → PostgreSQL → Explore repository → 
 ```
 
 CSV fixture là dữ liệu giả lập, kể cả các report mang `data_type=community`. Chúng luôn giữ `is_simulated=true`, chỉ được Explore repository đọc khi `DATA_IMPORT_TARGET_ENVIRONMENT` là `local`, `ci` hoặc `staging`, và bị production importer từ chối.
+
+`places.csv` giữ mức giá, quy mô, sức chứa và lịch mở cửa thường lệ. `place-areas.csv` giữ các khu vực con trong quán. Cả hai đều đi qua cùng seed transaction; UI Place Detail chỉ đọc dữ liệu đã import từ PostgreSQL.
 
 `place-media.csv` dùng cùng transaction seed. Importer kiểm tra place/area ownership, stable `media_id`, một `sort_order` duy nhất trong khoảng `0–4`, đúng một trong `storage_key`/`source_url`, moderation và quyền sử dụng. Media `source_type=synthetic` bắt buộc `is_simulated=true`, `storage_key` local và `rights_status=verified`; production policy từ chối record simulated trước khi query DB.
 

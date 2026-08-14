@@ -22,6 +22,23 @@ async function main() {
   const reportsPath = join(directory, "synthetic-vibe-reports.csv");
   const now = new Date();
   const visitedAt = new Date(now.getTime() - 3_600_000).toISOString();
+  const weeklyHours = {
+    friday: [{ closes: "22:00", opens: "07:00" }],
+    monday: [{ closes: "22:00", opens: "07:00" }],
+    saturday: [{ closes: "23:00", opens: "08:00" }],
+    sunday: [],
+    thursday: [{ closes: "22:00", opens: "07:00" }],
+    tuesday: [{ closes: "22:00", opens: "07:00" }],
+    wednesday: [{ closes: "22:00", opens: "07:00" }],
+  };
+  const openingHours = {
+    timezone: "Asia/Ho_Chi_Minh",
+    weekly: weeklyHours,
+  };
+  const openingHoursCsv = `"${JSON.stringify(openingHours).replaceAll(
+    '"',
+    '""',
+  )}"`;
   const client = createImportDatabaseClient();
   let transactionOpen = false;
 
@@ -48,8 +65,8 @@ async function main() {
     await writeFile(
       placesPath,
       [
-        "internal_id,name,address,latitude,longitude,district,status,is_simulated,size_category,estimated_capacity,price_level,typical_spend_min,typical_spend_max,currency",
-        "verify_import_place,Verify Import Cafe,1 Verify Street,10.78,106.70,Quận 1,published,true,small,20,2,30000,60000,VND",
+        "internal_id,name,address,latitude,longitude,district,status,is_simulated,size_category,estimated_capacity,price_level,typical_spend_min,typical_spend_max,currency,opening_hours",
+        `verify_import_place,Verify Import Cafe,1 Verify Street,10.78,106.70,Quận 1,published,true,small,20,2,30000,60000,VND,${openingHoursCsv}`,
       ].join("\n"),
     );
     await writeFile(
@@ -225,6 +242,39 @@ async function main() {
     );
     assert.equal(poi.entities.placeSources.created, 1);
 
+    await writeFile(
+      placesPath,
+      [
+        "internal_id,name,address,latitude,longitude,district,status,is_simulated",
+        "verify_import_place,Verify Import Cafe,1 Verify Street,10.78,106.70,Quận 1,published,true",
+      ].join("\n"),
+    );
+    const sparsePoi = await runDataImport(
+      {
+        command: "poi",
+        dryRun: false,
+        environment: "local",
+        input: { filePath: placesPath, sourcesPath: placeSourcesPath },
+        operatorId: "integration-test",
+      },
+      client,
+      { manageTransaction: false },
+    );
+    assert.equal(sparsePoi.status, "passed");
+    assert.equal(sparsePoi.entities.places.unchanged, 1);
+    const preservedFacts = await client.query<{
+      opening_hours: typeof openingHours;
+      price_level: number;
+    }>(
+      `SELECT opening_hours, price_level
+         FROM places
+        WHERE internal_id = 'verify_import_place'`,
+    );
+    assert.deepEqual(preservedFacts.rows[0], {
+      opening_hours: openingHours,
+      price_level: 2,
+    });
+
     const repeatPoi = await runDataImport(
       {
         command: "poi",
@@ -301,6 +351,14 @@ async function main() {
     );
     assert.equal(rejectedPlace.rows[0].count, 0);
 
+    await writeFile(
+      placesPath,
+      [
+        "internal_id,name,address,latitude,longitude,district,status,is_simulated,size_category,estimated_capacity,price_level,typical_spend_min,typical_spend_max,currency,opening_hours",
+        `verify_import_place,Verify Import Cafe,1 Verify Street,10.78,106.70,Quận 1,published,true,small,20,3,35000,70000,VND,${openingHoursCsv}`,
+      ].join("\n"),
+    );
+
     const seed = await runDataImport(
       {
         command: "seed",
@@ -313,7 +371,7 @@ async function main() {
       { manageTransaction: false },
     );
     assert.equal(seed.status, "passed");
-    assert.equal(seed.entities.places.unchanged, 1);
+    assert.equal(seed.entities.places.updated, 1);
     assert.equal(seed.entities.placeAreas.created, 1);
     assert.equal(seed.entities.vibeReports.created, 1);
 
@@ -337,11 +395,15 @@ async function main() {
     const databaseState = await client.query<{
       is_covered: boolean;
       membership_count: number;
+      opening_hours: typeof openingHours;
+      price_level: number;
       source_count: number;
       report_count: number;
     }>(
       `SELECT
          ST_Covers(boundary.boundary, place.location) AS is_covered,
+         place.opening_hours,
+         place.price_level,
          (SELECT count(*)::integer FROM place_service_areas AS membership
            WHERE membership.place_id = place.id) AS membership_count,
          (SELECT count(*)::integer FROM vibe_reports AS report
@@ -360,6 +422,8 @@ async function main() {
     assert.deepEqual(databaseState.rows[0], {
       is_covered: true,
       membership_count: expectedMembershipCount,
+      opening_hours: openingHours,
+      price_level: 3,
       report_count: 1,
       source_count: 1,
     });

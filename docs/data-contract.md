@@ -75,6 +75,7 @@ Chốn quản lý nguồn dữ liệu theo hai trục độc lập:
 | `typical_spend_min` | Không | integer | VND; không âm |
 | `typical_spend_max` | Không | integer | VND; không nhỏ hơn min |
 | `currency` | Có | string | V1 mặc định `VND` |
+| `opening_hours` | Không | JSON string | Contract lịch thường lệ v1; xem quy tắc bên dưới |
 
 Quy tắc:
 
@@ -82,6 +83,33 @@ Quy tắc:
 - Fixture ID bắt đầu bằng `syn_`.
 - Production place không được có tên/địa chỉ chứa “hư cấu”, “fixture” hoặc prefix fixture đã biết.
 - Tọa độ trùng hoặc tên gần giống trong bán kính nhỏ phải được báo là conflict, không tự merge.
+
+### `opening_hours` v1
+
+`opening_hours` mô tả lịch thường lệ, không khẳng định quán đang mở hay đóng tại
+thời điểm người dùng xem. Giá trị CSV là một JSON object có cấu trúc:
+
+```json
+{
+  "timezone": "Asia/Ho_Chi_Minh",
+  "weekly": {
+    "monday": [{ "opens": "07:00", "closes": "22:00" }],
+    "tuesday": [{ "opens": "07:00", "closes": "22:00" }],
+    "wednesday": [{ "opens": "07:00", "closes": "22:00" }],
+    "thursday": [{ "opens": "07:00", "closes": "22:00" }],
+    "friday": [{ "opens": "07:00", "closes": "22:00" }],
+    "saturday": [{ "opens": "08:00", "closes": "23:00" }],
+    "sunday": []
+  }
+}
+```
+
+Quy tắc v1:
+
+- `timezone` bắt buộc là `Asia/Ho_Chi_Minh`; `weekly` phải có đúng bảy ngày.
+- Mỗi ngày có 0–4 khoảng, dùng định dạng 24 giờ `HH:mm`; mảng rỗng nghĩa là đóng cửa theo lịch thường lệ.
+- Khoảng giờ phải nằm trong cùng ngày, được sắp tăng dần và không chồng lấn. Lịch qua nửa đêm được hoãn sang contract sau.
+- Field rỗng nghĩa là chưa có lịch đã xác minh; importer không suy diễn từ dữ liệu khác.
 
 ## 4. `place-sources.csv`
 

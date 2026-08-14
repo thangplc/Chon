@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parsePlaceOpeningHours } from "../../../../../packages/domain/src/place-detail/place-detail";
 
 import { ImportError, type ImportIssue, type ImportFile } from "./types";
 import type { CsvRecord, ParsedCsv } from "./csv";
@@ -47,6 +48,24 @@ const optionalTimestamp = z.preprocess(
   (value) => (value === "" || value === undefined ? undefined : value),
   timestampWithTimezone.optional(),
 );
+const optionalOpeningHours = z.preprocess(
+  (value) => (value === "" || value === undefined ? undefined : value),
+  z
+    .string()
+    .transform((value, context) => {
+      try {
+        return parsePlaceOpeningHours(JSON.parse(value) as unknown);
+      } catch (error) {
+        context.addIssue({
+          code: "custom",
+          message:
+            error instanceof Error ? error.message : "invalid opening_hours",
+        });
+        return z.NEVER;
+      }
+    })
+    .optional(),
+);
 
 const placeSchema = z
   .object({
@@ -64,6 +83,7 @@ const placeSchema = z
     latitude: decimal(-90, 90),
     longitude: decimal(-180, 180),
     name: requiredText(120),
+    opening_hours: optionalOpeningHours,
     price_level: optionalInteger(1, 4),
     size_category: z.preprocess(
       (value) => (value === "" || value === undefined ? "unknown" : value),
@@ -87,6 +107,18 @@ const placeSchema = z
       });
     }
   });
+
+export const PLACE_MUTABLE_FIELDS = [
+  "currency",
+  "estimated_capacity",
+  "opening_hours",
+  "price_level",
+  "size_category",
+  "typical_spend_max",
+  "typical_spend_min",
+] as const;
+
+export type PlaceMutableField = (typeof PLACE_MUTABLE_FIELDS)[number];
 
 const placeAreaSchema = z
   .object({
@@ -314,7 +346,10 @@ const vibeReportSchema = z
     }
   });
 
-export type PlaceInput = z.output<typeof placeSchema>;
+export type PlaceInput = z.output<typeof placeSchema> &
+  Readonly<{
+    providedMutableFields: readonly PlaceMutableField[];
+  }>;
 export type PlaceAreaInput = z.output<typeof placeAreaSchema>;
 export type PlaceMediaInput = z.output<typeof placeMediaSchema>;
 export type PlaceSourceInput = z.output<typeof placeSourceSchema>;
@@ -359,7 +394,13 @@ function validateRecords<T>(
 }
 
 export function validatePlaces(parsed: ParsedCsv): readonly PlaceInput[] {
-  return validateRecords(parsed, placeSchema);
+  const rows = validateRecords(parsed, placeSchema);
+  return rows.map((row, index) => ({
+    ...row,
+    providedMutableFields: PLACE_MUTABLE_FIELDS.filter((field) =>
+      Boolean(parsed.records[index][field]?.trim()),
+    ),
+  }));
 }
 
 export function validatePlaceAreas(

@@ -1,1 +1,1 @@
-internal_id,name,address,latitude,longitude,district,status,is_simulated,size_category,estimated_capacity,price_level,typical_spend_min,typical_spend_max,currency
+internal_id,name,address,latitude,longitude,district,status,is_simulated,size_category,estimated_capacity,price_level,typical_spend_min,typical_spend_max,currency,opening_hours

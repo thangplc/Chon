@@ -1,0 +1,16 @@
+area_id,place_id,name,description,is_simulated
+syn_area_001_indoor,syn_place_001,Khu trong nhà,Bàn đôi và ổ cắm gần cửa sổ,true
+syn_area_001_balcony,syn_place_001,Ban công,Khu thoáng nhìn xuống đường,true
+syn_area_002_indoor,syn_place_002,Khu máy lạnh,Không gian chính có bàn nhóm,true
+syn_area_002_garden,syn_place_002,Sân vườn,Khu ngoài trời có mái che,true
+syn_area_003_reading,syn_place_003,Góc đọc sách,Khu nhỏ ưu tiên ngồi yên tĩnh,true
+syn_area_004_ground,syn_place_004,Tầng trệt,Bàn đơn và quầy pha chế,true
+syn_area_005_evening,syn_place_005,Phòng ánh sáng ấm,Khu ngồi chính vào buổi tối,true
+syn_area_006_garden,syn_place_006,Sân ngoài trời,Khu rộng có nhiều cây xanh,true
+syn_area_006_indoor,syn_place_006,Khu trong nhà,Khu có máy lạnh và bàn dài,true
+syn_area_007_window,syn_place_007,Dãy cửa sổ,Bàn đơn nhìn ra đường,true
+syn_area_008_ground,syn_place_008,Tầng trệt,Khu gọi món và ngồi nhanh,true
+syn_area_008_upper,syn_place_008,Tầng 2,Khu bàn nhóm và làm việc,true
+syn_area_009_quiet,syn_place_009,Phòng yên tĩnh,Khu hạn chế trò chuyện lớn,true
+syn_area_010_communal,syn_place_010,Bàn cộng đồng,Bàn dài phù hợp nhóm đông,true
+syn_area_010_balcony,syn_place_010,Ban công,Khu ngoài trời nhìn ra phố,true

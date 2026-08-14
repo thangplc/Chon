@@ -19,7 +19,7 @@ vi.mock("./place-detail-map", () => ({
 describe("PlaceDetailView", () => {
   beforeEach(() => back.mockClear());
 
-  it("renders base place information without inventing later Sprint 3 data", () => {
+  it("renders verified opening hours, price and internal areas", () => {
     render(<PlaceDetailView mapStyleUrl={null} place={placeDetailTestData} />);
 
     expect(
@@ -33,10 +33,42 @@ describe("PlaceDetailView", () => {
       screen.getByRole("link", { name: "Trở về Explore" }),
     ).toHaveAttribute("href", "/");
     expect(
-      screen.getByText(/Giờ mở cửa, mức giá, khu vực trong quán/),
+      screen.getByRole("heading", { name: "Thông tin địa điểm" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Xem lịch cả tuần")).toBeInTheDocument();
+    expect(screen.getByText(/45\.000/)).toBeInTheDocument();
+    expect(screen.getByText(/Phân khúc: Phổ thông/)).toBeInTheDocument();
+    expect(screen.getByText("Khu trong nhà")).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Vị trí của Góc Test" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps missing facts explicit without inventing values", () => {
+    render(
+      <PlaceDetailView
+        mapStyleUrl={null}
+        place={{
+          ...placeDetailTestData,
+          areas: [],
+          estimatedCapacity: null,
+          openingHours: null,
+          priceLevel: null,
+          sizeCategory: "unknown",
+          typicalSpendMax: null,
+          typicalSpendMin: null,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Chưa có lịch mở cửa đã xác minh."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Chưa có thông tin giá đã xác minh."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Chưa có thông tin không gian đã xác minh."),
     ).toBeInTheDocument();
   });
 

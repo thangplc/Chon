@@ -8,6 +8,7 @@ Thư mục này chứa dữ liệu phục vụ phát triển và các template t
 data/
   fixtures/
     places.csv
+    place-areas.csv
     place-media.csv
     synthetic-vibe-reports.csv
     simulated-research-vibe-reports.csv
@@ -19,7 +20,7 @@ data/
     community-vibe-reports.csv
 ```
 
-Toàn bộ địa điểm, media và report trong `fixtures/` là hư cấu. Chúng chỉ dùng cho local, CI, staging và prototype. Metadata media nằm trong `place-media.csv`; năm SVG minh họa nằm tại `public/place-media/synthetic/` và không được trình bày như ảnh quán thật.
+Toàn bộ địa điểm, khu vực trong quán, media và report trong `fixtures/` là hư cấu. Chúng chỉ dùng cho local, CI, staging và prototype. `places.csv` có dữ liệu giá, quy mô, sức chứa và lịch mở cửa thường lệ; `place-areas.csv` mô tả các khu vực con. Metadata media nằm trong `place-media.csv`; năm SVG minh họa nằm tại `apps/web/public/place-media/synthetic/` và không được trình bày như ảnh quán thật.
 
 Explore local dùng pipeline:
 

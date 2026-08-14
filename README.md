@@ -10,7 +10,7 @@ Ví dụ truy vấn:
 
 ## Trạng thái
 
-Dự án đã hoàn thành engineering scope của Sprint 1, Sprint 2 và đợt tách backend. Next.js hiện chịu trách nhiệm web rendering; NestJS sở hữu REST API và truy cập PostgreSQL/PostGIS qua Drizzle. Sprint 3 đang tạm dừng sau vertical slice Place Detail để review lại scope trên kiến trúc mới; provider vibe vẫn tắt.
+Dự án đã hoàn thành engineering scope của Sprint 1, Sprint 2 và đợt tách backend. Next.js hiện chịu trách nhiệm web rendering; NestJS sở hữu REST API và truy cập PostgreSQL/PostGIS qua Drizzle. Sprint 3 đã tiếp tục trên kiến trúc mới; Place Detail hiện có gallery, lịch mở cửa thường lệ, giá và khu vực trong quán. Provider vibe vẫn tắt.
 
 Tài liệu nền tảng:
 

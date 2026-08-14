@@ -94,7 +94,9 @@ Importer gán POI vào khu vực bằng `ST_Covers(boundary, place.location)`. K
 - `price_level`.
 - `typical_spend_min`, `typical_spend_max`, `currency`.
 - `size_category`, `estimated_capacity`.
-- `opening_hours`: structured JSON.
+- `opening_hours`: structured JSON cho lịch thường lệ v1 gồm timezone
+  `Asia/Ho_Chi_Minh`, đủ bảy ngày và các khoảng `opens`/`closes` cùng ngày;
+  `NULL` nghĩa là chưa có lịch đã xác minh.
 - `status`: draft, published, archived.
 - timestamps.
 

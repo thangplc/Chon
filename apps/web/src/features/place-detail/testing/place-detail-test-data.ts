@@ -2,8 +2,18 @@ import type { PlaceDetail } from "../domain/place-detail";
 
 export const placeDetailTestData: PlaceDetail = {
   address: "12 Đường Test",
+  areas: [
+    {
+      description: "Không gian có máy lạnh",
+      id: "test-area-1",
+      isSimulated: true,
+      name: "Khu trong nhà",
+    },
+  ],
+  currency: "VND",
   description: null,
   district: "Quận 3",
+  estimatedCapacity: 40,
   id: "test-place-id",
   isSimulated: true,
   latitude: 10.78,
@@ -33,5 +43,21 @@ export const placeDetailTestData: PlaceDetail = {
     },
   ],
   name: "Góc Test",
+  openingHours: {
+    timezone: "Asia/Ho_Chi_Minh",
+    weekly: {
+      friday: [{ closes: "22:00", opens: "07:00" }],
+      monday: [{ closes: "22:00", opens: "07:00" }],
+      saturday: [{ closes: "23:00", opens: "08:00" }],
+      sunday: [],
+      thursday: [{ closes: "22:00", opens: "07:00" }],
+      tuesday: [{ closes: "22:00", opens: "07:00" }],
+      wednesday: [{ closes: "22:00", opens: "07:00" }],
+    },
+  },
+  priceLevel: 2,
+  sizeCategory: "medium",
   slug: "goc-test",
+  typicalSpendMax: 90_000,
+  typicalSpendMin: 45_000,
 };
