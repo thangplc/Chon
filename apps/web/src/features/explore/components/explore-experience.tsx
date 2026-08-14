@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -360,7 +361,7 @@ export function ExploreExperience({
           </div>
         </section>
 
-        <section className="mt-5 grid gap-0 lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)] lg:gap-4">
+        <section className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)] lg:gap-4">
           <div className="relative self-start overflow-hidden rounded-[2rem] border border-[#173f33]/10 bg-[#d9ddc7] shadow-sm lg:sticky lg:top-4">
             <a
               className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-[#173f33] focus:shadow-lg focus:outline-2 focus:outline-offset-2 focus:outline-[#c59635]"
@@ -376,17 +377,20 @@ export function ExploreExperience({
               places={results}
               selectedPlaceId={selectedPlaceId}
             />
-            <div className="absolute right-5 bottom-5 rounded-2xl bg-white/90 p-3 text-xs leading-5 text-[#42645a] shadow-sm backdrop-blur">
+            <aside
+              aria-label="Nguồn dữ liệu vibe"
+              className="border-t border-[#173f33]/10 bg-white/90 px-4 py-3 text-xs leading-5 text-[#42645a] backdrop-blur lg:absolute lg:right-5 lg:bottom-5 lg:rounded-2xl lg:border-0 lg:p-3 lg:shadow-sm"
+            >
               <strong className="block text-[#173f33]">Nguồn vibe</strong>
               Community giả lập · PostgreSQL
-            </div>
+            </aside>
           </div>
 
           <section
             aria-describedby="explore-results-help"
             aria-labelledby="result-title"
             aria-busy={viewportStatus === "loading"}
-            className="relative z-20 -mt-10 max-h-[70vh] overflow-y-auto rounded-t-[2rem] border border-[#173f33]/10 bg-white/90 p-4 shadow-xl backdrop-blur sm:p-5 lg:z-auto lg:mt-0 lg:max-h-none lg:overflow-visible lg:rounded-[2rem] lg:bg-white/75 lg:shadow-sm"
+            className="relative max-h-[70vh] overflow-y-auto rounded-[2rem] border border-[#173f33]/10 bg-white/90 p-4 shadow-xl backdrop-blur sm:p-5 lg:max-h-none lg:overflow-visible lg:bg-white/75 lg:shadow-sm"
             id="explore-results"
             tabIndex={-1}
           >
@@ -499,7 +503,14 @@ export function ExploreExperience({
                 const placeMatchId = `place-${place.id}-match`;
                 const placeStatusId = `place-${place.id}-status`;
                 return (
-                  <li key={place.id}>
+                  <li
+                    className={`overflow-hidden rounded-2xl border transition ${
+                      selected
+                        ? "border-[#c59635] bg-[#fff8e7] shadow-md"
+                        : "border-[#173f33]/10 bg-white hover:border-[#2f6555]/35"
+                    }`}
+                    key={place.id}
+                  >
                     <button
                       aria-current={selected ? "true" : undefined}
                       aria-describedby={`${placeMetaId} ${
@@ -507,11 +518,7 @@ export function ExploreExperience({
                       } ${placeStatusId}`.replaceAll("  ", " ")}
                       aria-labelledby={`${placeRankId} ${placeNameId}`}
                       aria-pressed={selected}
-                      className={`w-full rounded-2xl border p-4 text-left transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c59635] ${
-                        selected
-                          ? "border-[#c59635] bg-[#fff8e7] shadow-md"
-                          : "border-[#173f33]/10 bg-white hover:border-[#2f6555]/35"
-                      }`}
+                      className="w-full p-4 text-left focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-[#c59635]"
                       onClick={() => setSelectedPlaceId(place.id)}
                       ref={(element) => {
                         if (element) cardRefs.current.set(place.id, element);
@@ -595,6 +602,16 @@ export function ExploreExperience({
                         </span>
                       </div>
                     </button>
+                    <div className="flex justify-end border-t border-[#173f33]/10 px-4 py-3">
+                      <Link
+                        aria-label={`Xem chi tiết ${place.name}`}
+                        className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-bold text-[#315d50] transition hover:bg-[#edf0e5] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c59635]"
+                        href={`/places/${place.slug}`}
+                      >
+                        Xem chi tiết
+                        <span aria-hidden="true">→</span>
+                      </Link>
+                    </div>
                   </li>
                 );
               })}

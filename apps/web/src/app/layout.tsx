@@ -16,12 +16,16 @@ export const metadata: Metadata = {
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;
+  modal: ReactNode;
 }>;
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default function RootLayout({ children, modal }: RootLayoutProps) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body>
+        {children}
+        {modal}
+      </body>
     </html>
   );
 }

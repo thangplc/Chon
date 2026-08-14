@@ -99,16 +99,23 @@ describe("ExploreExperience", () => {
         name: "Bỏ qua bản đồ, đến danh sách địa điểm",
       }),
     ).toHaveAttribute("href", "#explore-results");
-    expect(
-      screen.getByRole("region", { name: "3 Chốn để thử" }),
-    ).toHaveAttribute("id", "explore-results");
+    const results = screen.getByRole("region", { name: "3 Chốn để thử" });
+    expect(results).toHaveAttribute("id", "explore-results");
+    expect(results).not.toHaveClass("-mt-10");
+    expect(results).toHaveClass("rounded-[2rem]");
     expect(
       screen.getByRole("region", { name: "3 Chốn để thử" }),
     ).toHaveAttribute("tabindex", "-1");
     expect(
       screen.getByRole("list", { name: "Danh sách địa điểm phù hợp" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Xem chi tiết Góc Test 01" }),
+    ).toHaveAttribute("href", "/places/goc-test-01");
     expect(screen.getByText("Bản đồ chưa được cấu hình")).toBeInTheDocument();
+    expect(
+      screen.getByRole("complementary", { name: "Nguồn dữ liệu vibe" }),
+    ).toHaveClass("lg:absolute");
     expect(
       screen.getByRole("region", { name: "Bản đồ các địa điểm" }).parentElement,
     ).toHaveClass("self-start", "lg:sticky", "lg:top-4");
