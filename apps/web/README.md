@@ -39,16 +39,23 @@ Không đặt database credential hoặc provider token trong file này.
 Backend phải chạy tại `BACKEND_API_URL`, sau đó chạy từ repository root:
 
 ```bash
-pnpm dev
+pnpm dev:web
 ```
 
 Các quality command:
 
 ```bash
-pnpm web:test
-pnpm web:typecheck
-pnpm web:build
+pnpm test:web
+pnpm typecheck:web
+pnpm build:web
 pnpm --filter @chon/web format:check
+```
+
+Production build và start riêng web:
+
+```bash
+pnpm build:web
+pnpm start:web
 ```
 
 ## Chạy cả frontend và backend
@@ -57,12 +64,12 @@ pnpm --filter @chon/web format:check
 cp apps/api/.env.example apps/api/.env
 pnpm db:up
 pnpm db:migrate
-pnpm dev:stack
+pnpm dev
 ```
 
-`pnpm dev:stack` là command duy nhất để chạy đồng thời Next.js tại
-`http://localhost:3000` và NestJS tại `http://localhost:3001`. Dùng `Ctrl+C` để
-dừng cả hai runtime.
+`pnpm dev` chạy đồng thời Next.js và NestJS. Port API được cấu hình bằng
+`API_PORT`; web kết nối qua `BACKEND_API_URL`. Dùng `Ctrl+C` để dừng cả hai
+runtime.
 
 Server-side requests use `BACKEND_API_URL`; browser spatial requests go through
 the same-origin `/api/places` proxy. Next.js loads `apps/web/.env` automatically.

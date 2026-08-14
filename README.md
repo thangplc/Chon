@@ -54,12 +54,12 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 pnpm db:up
 pnpm db:migrate
-pnpm dev:stack
+pnpm dev
 ```
 
-`pnpm dev:stack` chạy Next.js tại `http://localhost:3000` và NestJS API tại
-`http://localhost:3001`. Có thể chạy riêng từng runtime bằng `pnpm dev` và
-`pnpm api:dev`.
+`pnpm dev` chạy đồng thời Next.js và NestJS API. Port API được lấy từ
+`apps/api/.env`; web kết nối tới URL trong `apps/web/.env`. Có thể chạy riêng
+từng runtime bằng `pnpm dev:web` và `pnpm dev:api`.
 
 Production source được tách thành `apps/web` và `apps/api`. Shared code nằm
 trong `packages/*`; toàn bộ migration, database schema, data pipeline, provider
@@ -83,7 +83,7 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build:all
+pnpm build
 ```
 
 GitHub Actions chạy `typecheck`, `lint`, `test` và build độc lập cả web/API trên mọi push, pull request và khi kích hoạt thủ công. Workflow dùng Node.js 22, pnpm `9.10.0`, frozen lockfile và cache pnpm.
@@ -108,9 +108,8 @@ pnpm data:verify
 
 NestJS, Drizzle, Docker Compose và các data/operator script cùng đọc
 `apps/api/.env`. Next.js chỉ đọc `apps/web/.env`; không đặt database credential
-hoặc provider token trong env của web. Nếu đang nâng cấp từ cấu trúc root
-`.env` cũ, chạy một lần `pnpm env:split` để phân loại và di chuyển các giá trị
-mà không ghi secret ra terminal.
+hoặc provider token trong env của web. Repository không dùng root `.env` hoặc
+`.env.local`.
 
 Explore và Place Detail local không đọc CSV trực tiếp, không hard-code địa điểm/media/vibe trong UI. CSV trong `data/fixtures` chỉ là dữ liệu giả lập; importer validate và ghi nó vào PostgreSQL, sau đó NestJS API truy vấn DB và Next.js đọc response đã validate để render trang.
 

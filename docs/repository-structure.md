@@ -12,7 +12,7 @@ packages/
   contracts/           Zod transport contracts được web validate tại boundary
   domain/              Pure Explore, Place Detail và spatial domain functions
 
-scripts/               Chỉ workspace orchestration/migration helper
+scripts/               Chỉ workspace orchestration
 data/                  Fixture/template và local source objects bị ignore
 docs/                  Product, architecture và operational runbooks
 prototype/             Prototype Sprint 0, không phải production source
@@ -46,12 +46,16 @@ root scripts → chỉ khởi chạy apps, không chứa business/infrastructure
 Chạy từ repository root:
 
 ```bash
-pnpm dev             # web only
-pnpm api:dev         # API only
-pnpm dev:stack       # web + API
+pnpm dev             # web + API
+pnpm dev:web         # chỉ web
+pnpm dev:api         # chỉ API
 pnpm test            # packages + web + API
 pnpm typecheck       # shared packages + web + API/tooling
-pnpm build:all       # independent production builds
+pnpm build           # production build web + API
+pnpm build:web       # chỉ build web
+pnpm build:api       # chỉ build API
+pnpm start:web       # chạy web production sau khi build
+pnpm start:api       # chạy API production sau khi build
 pnpm --filter @chon/web format:check
 pnpm --filter @chon/api format:check
 ```

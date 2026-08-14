@@ -2,8 +2,8 @@ import { spawn } from "node:child_process";
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const commands = [
-  ["web", ["dev"]],
-  ["api", ["api:dev"]],
+  ["web", ["dev:web"]],
+  ["api", ["dev:api"]],
 ];
 const children = new Map();
 let isShuttingDown = false;
@@ -27,7 +27,7 @@ for (const [name, args] of commands) {
   children.set(name, child);
 
   child.on("error", (error) => {
-    console.error(`[dev:stack] ${name} failed to start`, error);
+    console.error(`[dev] ${name} failed to start`, error);
     process.exitCode = 1;
     shutdown("SIGTERM");
   });
@@ -36,9 +36,7 @@ for (const [name, args] of commands) {
     children.delete(name);
 
     if (!isShuttingDown && (code !== 0 || signal !== null)) {
-      console.error(
-        `[dev:stack] ${name} exited unexpectedly (${signal ?? code})`,
-      );
+      console.error(`[dev] ${name} exited unexpectedly (${signal ?? code})`);
       process.exitCode = code ?? 1;
       shutdown("SIGTERM");
     }

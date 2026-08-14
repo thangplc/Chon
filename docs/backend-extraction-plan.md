@@ -91,7 +91,7 @@ Migration chỉ được coi là hoàn tất khi:
 - Web: 9 test files, 41 tests pass.
 - API: 10 test files, 48 tests pass, gồm database/data/provider tests do backend
   sở hữu.
-- `format:check`, `lint`, web/API `typecheck` và `build:all` pass.
+- `format:check`, `lint`, web/API `typecheck` và `build` pass.
 - `db:check`, core schema verification và bbox/radius spatial verification pass.
 - HTTP smoke pass cho health, spatial places, Explore, Place Detail, Next proxy
   và hai Next page routes.
