@@ -1,8 +1,9 @@
 # Kiến trúc và dữ liệu MVP
 
-## 1. Stack đề xuất
+## 1. Stack và runtime boundary
 
-- Web/PWA: Next.js + TypeScript.
+- Web/PWA: Next.js + TypeScript; chịu trách nhiệm React UI và SSR.
+- Backend API: NestJS REST/OpenAPI; cutover hoàn thành ngày 2026-08-14.
 - UI: Tailwind CSS + component primitives có accessibility.
 - Map: MapLibre GL JS + MapTiler Cloud tile/style.
 - Database: PostgreSQL + PostGIS.
@@ -10,7 +11,7 @@
 - Authentication: Auth.js hoặc nhà cung cấp tương đương.
 - Validation: Zod.
 - Test: Vitest, Testing Library và Playwright.
-- Hosting ban đầu: Vercel/Cloudflare cho web; managed PostgreSQL có PostGIS.
+- Hosting ban đầu: managed Next.js platform cho web, managed Node.js runtime cho API và managed PostgreSQL có PostGIS.
 - Analytics: công cụ event analytics tôn trọng privacy.
 
 Provider architecture đã chốt trong `PROVIDER-SPIKE.md`: FSQ OS Places cho POI snapshot/delta, MapTiler Cloud cho tile/style và geocoding; Geoapify là fallback. Auth, database hosting và web hosting vendor vẫn chờ spike riêng.
@@ -18,14 +19,17 @@ Provider architecture đã chốt trong `PROVIDER-SPIKE.md`: FSQ OS Places cho P
 ## 2. Các module
 
 ```text
-Web/PWA
+Browser
+  │
+Next.js Web
   ├── Explore map/list
   ├── Search and filters
   ├── Place details
   ├── Contribution flow
   └── Collections
+  └── same-origin API proxy
         │
-Application layer
+NestJS API / Application layer
   ├── Place search
   ├── Provider signal normalization
   ├── Vibe aggregation
@@ -42,7 +46,15 @@ PostgreSQL + PostGIS
   └── Users and collections
 ```
 
-MVP nên là modular monolith. Chưa cần microservices, queue riêng hoặc vector database.
+MVP là modular monolith trong pnpm workspace với hai deployable runtime: web và
+API. Next.js không truy cập database trong request path. Importer và
+operational scripts vẫn dùng cùng Drizzle schema/migrations. Chưa cần
+microservices, queue riêng hoặc vector database.
+
+Cây source và dependency direction được chốt trong
+`docs/repository-structure.md`: web/API cùng operational code do chúng sở hữu ở
+`apps/*`; chỉ contract/domain dùng chung ở `packages/*`; không còn production
+`src` tại workspace root.
 
 ## 3. Data model đề xuất
 

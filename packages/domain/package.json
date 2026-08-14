@@ -1,0 +1,15 @@
+{
+  "name": "@chon/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./explore": "./src/explore/explore.ts",
+    "./explore-contract": "./src/explore/explore-contract.ts",
+    "./place-detail": "./src/place-detail/place-detail.ts",
+    "./spatial-query": "./src/places/spatial-query.ts"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  }
+}

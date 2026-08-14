@@ -1,0 +1,25 @@
+import path from "node:path";
+
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+
+import { validateApiEnvironment } from "./config/api-environment";
+import { ExploreModule } from "./explore/explore.module";
+import { HealthModule } from "./health/health.module";
+import { PlacesModule } from "./places/places.module";
+
+const apiEnvironmentPath = path.resolve(process.cwd(), ".env");
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      envFilePath: apiEnvironmentPath,
+      isGlobal: true,
+      validate: validateApiEnvironment,
+    }),
+    ExploreModule,
+    HealthModule,
+    PlacesModule,
+  ],
+})
+export class AppModule {}

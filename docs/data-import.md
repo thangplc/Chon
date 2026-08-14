@@ -6,11 +6,15 @@ CLI hiện hỗ trợ ba luồng:
 
 - `boundary`: validate/import GeoJSON ranh giới có version vào PostGIS.
 - `poi`: validate/import cặp `places.csv` và `place-sources.csv` đã normalize.
-- `seed`: validate/import một thư mục gồm `places.csv`, `place-areas.csv` tùy chọn và các file `*-vibe-reports.csv`.
+- `seed`: validate/import một thư mục gồm `places.csv`, `place-areas.csv` tùy chọn, `place-media.csv` tùy chọn và các file `*-vibe-reports.csv`.
 
 Production import **fail-closed theo record**: chỉ nhận dữ liệu thật và chỉ nhận vibe report `editorial` hoặc `community`. `synthetic`, `research` và mọi record `is_simulated=true` bị từ chối trước khi query dữ liệu hiện có hoặc thực hiện database write.
 
-Mọi import có ghi database còn phải có `DATA_IMPORT_TARGET_ENVIRONMENT` trong `.env` và giá trị này phải khớp `--environment`. Điều này ngăn việc kết nối production nhưng vô tình hoặc cố ý gắn nhãn import là `local`. Dry-run không ghi dữ liệu nên được phép dùng `--environment production` trên target local để kiểm tra policy.
+Mọi import có ghi database còn phải có `DATA_IMPORT_TARGET_ENVIRONMENT` trong
+`apps/api/.env` và giá trị này phải khớp `--environment`. Điều này ngăn việc kết
+nối production nhưng vô tình hoặc cố ý gắn nhãn import là `local`. Dry-run không
+ghi dữ liệu nên được phép dùng `--environment production` trên target local để
+kiểm tra policy.
 
 | Environment | Data type được phép | Simulated record |
 |---|---|---|
@@ -50,7 +54,8 @@ pnpm data:import seed --dir path/to/production-seed \
 
 Sau khi summary không có conflict/reject:
 
-Cấu hình `DATA_IMPORT_TARGET_ENVIRONMENT=local` (hoặc target tương ứng) trong `.env`, sau đó chạy:
+Cấu hình `DATA_IMPORT_TARGET_ENVIRONMENT=local` (hoặc target tương ứng) trong
+`apps/api/.env`, sau đó chạy:
 
 ```bash
 pnpm data:import poi \
@@ -70,6 +75,8 @@ data/fixtures/*.csv → seed importer → PostgreSQL → Explore repository → 
 ```
 
 CSV fixture là dữ liệu giả lập, kể cả các report mang `data_type=community`. Chúng luôn giữ `is_simulated=true`, chỉ được Explore repository đọc khi `DATA_IMPORT_TARGET_ENVIRONMENT` là `local`, `ci` hoặc `staging`, và bị production importer từ chối.
+
+`place-media.csv` dùng cùng transaction seed. Importer kiểm tra place/area ownership, stable `media_id`, một `sort_order` duy nhất trong khoảng `0–4`, đúng một trong `storage_key`/`source_url`, moderation và quyền sử dụng. Media `source_type=synthetic` bắt buộc `is_simulated=true`, `storage_key` local và `rights_status=verified`; production policy từ chối record simulated trước khi query DB.
 
 Địa điểm được gán vào active service area bằng `ST_Covers` trên current boundary. Chuỗi `district` chỉ là metadata, không quyết định membership. Nếu chưa có boundary, importer vẫn cho phép nạp POI nhưng báo warning `outside_active_service_area`.
 
@@ -99,7 +106,8 @@ Quy tắc mapping:
 
 ## Boundary
 
-Ba service area MVP được khai báo tập trung trong `src/config/service-area-boundaries.ts`:
+Ba service area MVP được khai báo tập trung trong
+`apps/api/src/data-pipeline/service-area-boundaries.ts`:
 
 | Service area | OSM relation | Storage key |
 |---|---:|---|

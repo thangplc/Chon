@@ -3,7 +3,7 @@
 coverage/
 data/
 docs/
-drizzle/meta/
+**/drizzle/meta/
 node_modules/
 prototype/
 *.md

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title description">
+  <title id="title">Góc cà phê cạnh cửa sổ</title>
+  <desc id="description">Minh họa giả lập với bàn gỗ cây xanh và nắng qua cửa sổ.</desc>
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e8dfc8"/><stop offset="1" stop-color="#b9c9b0"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a9d7e8"/><stop offset="1" stop-color="#f5dca2"/></linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#wall)"/>
+  <rect x="650" y="80" width="430" height="430" rx="16" fill="url(#glass)" stroke="#f8f3e8" stroke-width="24"/>
+  <path d="M865 90v410M665 290h400" stroke="#f8f3e8" stroke-width="18"/>
+  <ellipse cx="485" cy="610" rx="320" ry="72" fill="#77543a"/>
+  <path d="M285 620l-40 180M685 620l45 180" stroke="#49372c" stroke-width="30"/>
+  <rect x="420" y="480" width="95" height="115" rx="18" fill="#f8f3e8"/>
+  <path d="M515 510c70-5 70 70 0 65" fill="none" stroke="#f8f3e8" stroke-width="22"/>
+  <path d="M170 540c-20-170 80-260 200-190-5 130-70 190-200 190z" fill="#315d50"/>
+  <circle cx="250" cy="330" r="62" fill="#6f8f68"/>
+</svg>
