@@ -1,14 +1,21 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 
+import { getPublicMapConfiguration } from "@/config/map";
 import { ExploreExperience } from "@/features/explore/components/explore-experience";
 import { getSimulatedExploreDataset } from "@/features/explore/data/explore-repository";
 
 async function ExploreFromDatabase() {
   await connection();
   const dataset = await getSimulatedExploreDataset();
+  const mapConfiguration = getPublicMapConfiguration();
 
-  return <ExploreExperience dataset={dataset} />;
+  return (
+    <ExploreExperience
+      dataset={dataset}
+      mapStyleUrl={mapConfiguration.styleUrl}
+    />
+  );
 }
 
 function ExploreLoading() {

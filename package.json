@@ -8,7 +8,9 @@
     "node": ">=20.9.0"
   },
   "scripts": {
+    "predev": "node scripts/prepare-maplibre-worker.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/prepare-maplibre-worker.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
@@ -20,6 +22,10 @@
     "test:watch": "vitest",
     "data:import": "node --import tsx scripts/data-import.ts",
     "data:verify": "node --import tsx scripts/verify-data-import.ts",
+    "service-areas:sync": "node --import tsx scripts/sync-service-area-boundaries.ts",
+    "service-areas:import": "node --import tsx scripts/import-service-area-boundaries.ts",
+    "service-areas:verify": "node --import tsx scripts/verify-service-area-coverage.ts",
+    "spatial:verify": "node --import tsx scripts/verify-spatial-place-query.ts",
     "provider:status": "node --import tsx scripts/provider-vibe-status.ts",
     "provider:credentials:check": "node --import tsx scripts/provider-vibe-status.ts",
     "provider:credentials:gate": "node --import tsx scripts/provider-vibe-status.ts --require-all",
@@ -35,6 +41,7 @@
   "dependencies": {
     "csv-parse": "^7.0.2",
     "drizzle-orm": "^0.45.2",
+    "maplibre-gl": "^6.3.0",
     "next": "^16.3.0",
     "pg": "^8.23.0",
     "react": "^19.2.8",

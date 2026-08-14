@@ -36,6 +36,8 @@ is_simulated=true
 
 Production importer phải từ chối mọi record có `is_simulated=true`, bất kể `data_type`. Các file trong `templates/` chỉ có header và được dùng để thu thập dữ liệu thật sau này.
 
+`source-objects/` là local mirror bị Git ignore của các source object bất biến như GeoJSON boundary. Đường dẫn sau thư mục này phải trùng `source_storage_key` lưu trong Postgres. Durable copy cho production nằm trong S3-compatible object storage, không nằm trong repository.
+
 Kiểm tra toàn bộ fixture mà không ghi database:
 
 ```bash
