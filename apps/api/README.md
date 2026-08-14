@@ -42,16 +42,23 @@ Không đặt MapTiler browser key trong API env.
 ```bash
 pnpm db:up
 pnpm db:migrate
-pnpm api:dev
+pnpm dev:api
 ```
 
 Các quality command:
 
 ```bash
-pnpm api:test
-pnpm api:typecheck
-pnpm api:build
+pnpm test:api
+pnpm typecheck:api
+pnpm build:api
 pnpm --filter @chon/api format:check
+```
+
+Production build và start riêng API:
+
+```bash
+pnpm build:api
+pnpm start:api
 ```
 
 ## Chạy cả frontend và backend
@@ -60,12 +67,12 @@ pnpm --filter @chon/api format:check
 cp apps/web/.env.example apps/web/.env
 pnpm db:up
 pnpm db:migrate
-pnpm dev:stack
+pnpm dev
 ```
 
-`pnpm dev:stack` chạy NestJS tại `http://localhost:3001` và Next.js tại
-`http://localhost:3000`. Command này không tự khởi tạo/xóa database volume;
-PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:down`.
+`pnpm dev` chạy đồng thời NestJS và Next.js. Port API được lấy từ `API_PORT`;
+web kết nối qua `BACKEND_API_URL`. Command này không tự khởi tạo/xóa database
+volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:down`.
 
 ## Endpoints
 
