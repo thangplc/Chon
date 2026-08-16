@@ -8,6 +8,7 @@ Thư mục này chứa dữ liệu phục vụ phát triển và các template t
 data/
   fixtures/
     places.csv
+    place-metadata-overlays-real-demo.csv
     place-areas.csv
     place-media.csv
     synthetic-vibe-reports.csv
@@ -18,6 +19,7 @@ data/
     research-vibe-reports.csv
     editorial-vibe-reports.csv
     community-vibe-reports.csv
+    place-metadata-overlays.csv
 ```
 
 Toàn bộ địa điểm, khu vực trong quán, media và report trong `fixtures/` là hư cấu. Chúng chỉ dùng cho local, CI, staging và prototype. `places.csv` có dữ liệu giá, quy mô, sức chứa và lịch mở cửa thường lệ; `place-areas.csv` mô tả các khu vực con. Metadata media nằm trong `place-media.csv`; năm SVG minh họa nằm tại `apps/web/public/place-media/synthetic/` và không được trình bày như ảnh quán thật.
@@ -29,6 +31,11 @@ CSV giả lập → validation/importer → PostgreSQL → server repository →
 ```
 
 UI không import CSV và không chứa constant địa điểm/media/vibe. Việc lưu fixture vào DB chỉ nhằm test luồng dữ liệu thật của ứng dụng; không làm cho dữ liệu giả lập trở thành dữ liệu production.
+
+Metadata demo cho POI thật dùng file `place-metadata-overlays.csv` và bảng
+`place_metadata_overlays`. Đây là overlay tách biệt; không sửa các cột
+canonical trong `places`. Chỉ nhập các `internal_id` của POI thật đã published
+và luôn hiển thị nhãn chưa xác minh trên web.
 
 Các fixture mô phỏng `research`, `editorial`, `community` giữ đúng giá trị `data_type` để test workflow, nhưng luôn có:
 

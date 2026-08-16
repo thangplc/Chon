@@ -75,3 +75,7 @@ Server-side requests use `BACKEND_API_URL`; browser spatial requests go through
 the same-origin `/api/places` proxy. Next.js loads `apps/web/.env` automatically.
 This file only contains web runtime configuration and public browser map values;
 database credentials and provider tokens belong exclusively to `apps/api/.env`.
+
+Explore đồng bộ bộ lọc vào URL và có nút `Chia sẻ bộ lọc`. Analytics dùng
+anonymous session ID, chỉ gửi context đã chuẩn hóa qua same-origin
+`/api/analytics/events`; không gửi tọa độ hoặc raw report text.

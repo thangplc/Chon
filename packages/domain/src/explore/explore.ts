@@ -2,13 +2,23 @@
 import type {
   ExploreCommunityReport,
   ExploreDataset,
+  ExploreDayType,
   ExploreDistrict,
+  ExplorePriceLevel,
+  ExploreSizeCategory,
   ExploreSourcePlace,
+  ExploreVibeSnapshot,
   PurposeId,
   TimeBucket,
   VibeDimension,
   VibeScores,
 } from "./explore-contract";
+import {
+  getDayTypeForDate,
+  getTimeBucketForLocalTime,
+} from "../vibe/vibe-snapshot";
+import { purposePreferences } from "./purpose-preferences";
+import { explainPurposeMatch, type ExploreExplanation } from "./explanation";
 
 const dimensions: readonly VibeDimension[] = [
   "noise",
@@ -19,86 +29,90 @@ const dimensions: readonly VibeDimension[] = [
   "socialEnergy",
 ];
 
-const purposeTargets: Readonly<Record<PurposeId, VibeScores>> = {
-  business_meeting: {
-    crowd: 2,
-    lighting: 2,
-    noise: 1,
-    privacy: 5,
-    socialEnergy: 2,
-    workability: 5,
-  },
-  date: {
-    crowd: 3,
-    lighting: 5,
-    noise: 2,
-    privacy: 5,
-    socialEnergy: 3,
-    workability: 1,
-  },
-  friends: {
-    crowd: 4,
-    lighting: 4,
-    noise: 4,
-    privacy: 2,
-    socialEnergy: 5,
-    workability: 1,
-  },
-  late_night: {
-    crowd: 3,
-    lighting: 4,
-    noise: 3,
-    privacy: 3,
-    socialEnergy: 4,
-    workability: 1,
-  },
-  relax: {
-    crowd: 2,
-    lighting: 3,
-    noise: 1,
-    privacy: 4,
-    socialEnergy: 1,
-    workability: 2,
-  },
-  solo: {
-    crowd: 2,
-    lighting: 3,
-    noise: 2,
-    privacy: 4,
-    socialEnergy: 2,
-    workability: 3,
-  },
-  study: {
-    crowd: 2,
-    lighting: 1,
-    noise: 1,
-    privacy: 4,
-    socialEnergy: 1,
-    workability: 5,
-  },
-  work: {
-    crowd: 2,
-    lighting: 2,
-    noise: 1,
-    privacy: 4,
-    socialEnergy: 1,
-    workability: 5,
-  },
-};
+export { purposePreferences } from "./purpose-preferences";
+export { explainPurposeMatch } from "./explanation";
 
 export type ExplorePlace = ExploreSourcePlace &
   Readonly<{
-    confidence: "insufficient" | "low" | "medium";
+    confidence: "insufficient" | "low" | "medium" | "high";
+    explanation: ExploreExplanation;
     matchScore: number | null;
+    providerSignalCount: number;
     reportCount: number;
+    vibeIsSimulated: boolean;
     vibe: VibeScores | null;
   }>;
 
-type ExploreFilters = Readonly<{
+export type ExploreFilters = Readonly<{
+  dayType?: ExploreDayType;
   district: "all" | ExploreDistrict;
+  amenities?: ReadonlySet<string>;
+  placeIds?: ReadonlySet<string>;
+  priceLevels?: ReadonlySet<ExplorePriceLevel>;
+  priceMax?: number | null;
+  priceMin?: number | null;
   purpose: PurposeId;
+  sizeCategories?: ReadonlySet<ExploreSizeCategory>;
   timeBucket: TimeBucket;
 }>;
+
+function matchesMetadataFilters(
+  place: ExploreSourcePlace,
+  filters: ExploreFilters,
+): boolean {
+  if (
+    filters.sizeCategories &&
+    filters.sizeCategories.size > 0 &&
+    !filters.sizeCategories.has(place.sizeCategory)
+  ) {
+    return false;
+  }
+
+  if (
+    filters.amenities &&
+    filters.amenities.size > 0 &&
+    ![...filters.amenities].every((amenity) =>
+      place.amenities.includes(amenity),
+    )
+  ) {
+    return false;
+  }
+
+  if (filters.priceLevels && filters.priceLevels.size > 0) {
+    if (
+      place.priceLevel === null ||
+      !filters.priceLevels.has(place.priceLevel)
+    ) {
+      return false;
+    }
+  }
+
+  const hasPriceRange =
+    (filters.priceMin !== null && filters.priceMin !== undefined) ||
+    (filters.priceMax !== null && filters.priceMax !== undefined);
+  if (hasPriceRange) {
+    const placeMinimum = place.typicalSpendMin ?? place.typicalSpendMax;
+    const placeMaximum = place.typicalSpendMax ?? place.typicalSpendMin;
+    if (placeMinimum === null || placeMaximum === null) return false;
+
+    if (
+      filters.priceMin !== null &&
+      filters.priceMin !== undefined &&
+      placeMaximum < filters.priceMin
+    ) {
+      return false;
+    }
+    if (
+      filters.priceMax !== null &&
+      filters.priceMax !== undefined &&
+      placeMinimum > filters.priceMax
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 function averageScores(
   reports: readonly ExploreCommunityReport[],
@@ -114,16 +128,80 @@ function averageScores(
   ) as unknown as VibeScores;
 }
 
+function completeScores(
+  scores: ExploreVibeSnapshot["scores"],
+): VibeScores | null {
+  const values = dimensions.map((dimension) => scores[dimension]);
+  return values.every((value): value is number => typeof value === "number")
+    ? (Object.fromEntries(
+        dimensions.map((dimension) => [dimension, scores[dimension]]),
+      ) as VibeScores)
+    : null;
+}
+
+function selectCanonicalVibe(
+  dataset: ExploreDataset,
+  placeId: string,
+  timeBucket: TimeBucket,
+  dayType: ExploreDayType = "weekday",
+): ExploreVibeSnapshot | null {
+  const candidates = dataset.vibes.filter(
+    (snapshot) =>
+      snapshot.placeId === placeId && snapshot.timeBucket === timeBucket,
+  );
+  return (
+    candidates.find(
+      ({ dayType: candidateDayType }) => candidateDayType === dayType,
+    ) ??
+    candidates.find(({ dayType }) => dayType === "weekday") ??
+    candidates[0] ??
+    null
+  );
+}
+
+export function getExploreTimeContext(
+  dateValue: string,
+  timeValue: string,
+): Readonly<{ dayType: ExploreDayType; timeBucket: TimeBucket }> | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return null;
+  if (!/^\d{2}:\d{2}$/.test(timeValue)) return null;
+
+  const [hour, minute] = timeValue.split(":").map(Number);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  const date = new Date(`${dateValue}T${timeValue}:00+07:00`);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return {
+    dayType: getDayTypeForDate(date, "Asia/Ho_Chi_Minh"),
+    timeBucket: getTimeBucketForLocalTime(hour, minute),
+  };
+}
+
 function calculateMatchScore(vibe: VibeScores, purpose: PurposeId): number {
-  const target = purposeTargets[purpose];
-  const total = dimensions.reduce(
-    (score, dimension) =>
-      score +
-      Math.max(0, 100 - Math.abs(vibe[dimension] - target[dimension]) * 25),
+  const preference = purposePreferences[purpose];
+  const totalWeight = dimensions.reduce(
+    (total, dimension) => total + preference.weights[dimension],
     0,
   );
+  const weightedTotal = dimensions.reduce((score, dimension) => {
+    const dimensionScore = Math.max(
+      0,
+      100 - Math.abs(vibe[dimension] - preference.targets[dimension]) * 25,
+    );
+    return score + dimensionScore * preference.weights[dimension];
+  }, 0);
 
-  return Math.round(total / dimensions.length);
+  return Math.round(weightedTotal / totalWeight);
 }
 
 export function getExplorePlaces(
@@ -135,24 +213,45 @@ export function getExplorePlaces(
       (place) =>
         filters.district === "all" || place.district === filters.district,
     )
+    .filter((place) => !filters.placeIds || filters.placeIds.has(place.id))
+    .filter((place) => matchesMetadataFilters(place, filters))
     .map((place): ExplorePlace => {
-      const relevantReports = dataset.reports.filter(
-        (report) =>
-          report.placeId === place.id &&
-          report.timeBucket === filters.timeBucket,
+      const canonicalVibe = selectCanonicalVibe(
+        dataset,
+        place.id,
+        filters.timeBucket,
+        filters.dayType,
       );
-      const vibe = averageScores(relevantReports);
+      const relevantReports =
+        dataset.source === "database_simulated_csv" &&
+        dataset.vibes.length === 0
+          ? dataset.reports.filter(
+              (report) =>
+                report.placeId === place.id &&
+                report.timeBucket === filters.timeBucket,
+            )
+          : [];
+      const vibe = canonicalVibe
+        ? completeScores(canonicalVibe.scores)
+        : averageScores(relevantReports);
 
       return {
         ...place,
-        confidence:
-          relevantReports.length === 0
+        confidence: canonicalVibe
+          ? canonicalVibe.reportCount === 0 && vibe === null
+            ? "insufficient"
+            : canonicalVibe.confidence.level
+          : relevantReports.length === 0
             ? "insufficient"
             : relevantReports.length === 1
               ? "low"
               : "medium",
+        explanation: explainPurposeMatch(vibe, filters.purpose),
         matchScore: vibe ? calculateMatchScore(vibe, filters.purpose) : null,
-        reportCount: relevantReports.length,
+        providerSignalCount: canonicalVibe?.providerSignalCount ?? 0,
+        reportCount: canonicalVibe?.reportCount ?? relevantReports.length,
+        vibeIsSimulated:
+          canonicalVibe?.isSimulated ?? place.metadata.isSimulated,
         vibe,
       };
     })

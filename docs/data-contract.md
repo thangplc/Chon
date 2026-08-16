@@ -2,6 +2,8 @@
 
 Trạng thái: **approved v1.1 — 2026-08-13**.
 
+Chính sách chọn nguồn và hiển thị vibe: [Vibe data policy](vibe-data-policy.md).
+
 ## 1. Phạm vi
 
 Contract này quy định CSV phục vụ fixtures, research và production seed. Importer được triển khai ở Sprint 1.
@@ -127,7 +129,14 @@ Provider adapter được cấu hình trong MVP:
 
 ```text
 fsq_os_places
+openstreetmap
 ```
+
+`openstreetmap` dùng cho provenance POI và metadata được enrich từ OSM, như
+`opening_hours`. Đây không phải `data_type` thứ năm. OSM object ID, thời điểm
+đọc, URL attribution và raw tags tối thiểu được lưu trong `place_sources`; dữ
+liệu canonical chỉ được cập nhật khi match tên + khoảng cách đạt ngưỡng và
+field hiện tại còn trống.
 
 Provider vibe candidates đã được chốt nhưng chỉ kích hoạt sau integration gate:
 

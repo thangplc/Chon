@@ -93,8 +93,8 @@ export class PlacesController {
     }
   }
 
-  @ApiOperation({ summary: "Read contribution vibe snapshots for a place" })
-  @ApiOkResponse({ description: "Time-context vibe snapshots" })
+  @ApiOperation({ summary: "Read canonical fused vibe snapshots for a place" })
+  @ApiOkResponse({ description: "Time-context Chốn vibe snapshots" })
   @ApiQuery({ name: "day_type", required: false })
   @ApiQuery({ name: "time_bucket", required: false })
   @ApiQuery({ name: "area_id", required: false })
@@ -150,6 +150,7 @@ export class PlacesController {
     const place = await this.placesService.findDetailBySlug(
       slug,
       this.config.get("DATA_IMPORT_TARGET_ENVIRONMENT", { infer: true }),
+      this.config.get("EXPLORE_PLACE_METADATA_MODE", { infer: true }),
     );
 
     if (!place) throw new NotFoundException();

@@ -74,15 +74,19 @@ Người dùng xem và chọn quán trong ba quận mục tiêu.
 
 ## Sprint 3 — Place detail và vibe data
 
-Trạng thái: **đang thực hiện** — Sprint 3 đã tiếp tục sau khi NestJS cutover gate pass; từng task còn lại vẫn được preview và duyệt scope trước khi implement.
+Trạng thái: **hoàn thành ngày 2026-08-16** — toàn bộ task Sprint 3 đã được implement và quality gates đã pass; live provider coverage vẫn là production gate deferred.
 
 - [x] Trang chi tiết địa điểm — canonical `/places/[slug]`, intercepted responsive drawer từ Explore, published-only repository, single-place map, gallery tối đa 5 ảnh có rights/provenance, simulated media CSV pipeline và loading/error/not-found/accessible focus states.
 - [x] Hiển thị giờ mở cửa, giá và khu vực trong quán — API detail trả lịch thường lệ, price/size/capacity và `place_areas`; seed importer hỗ trợ update allowlist; UI có trạng thái đủ/thiếu dữ liệu và fixture synthetic end-to-end.
 - [x] Implement time buckets và vibe snapshots — chuẩn hóa 5 bucket theo timezone, snapshot contribution từ report approved, migration/API/rebuild `--dry-run` và provenance data types.
-- [ ] Viết provider adapters và normalize signal theo field/storage allowlist của từng nguồn.
-- [ ] Implement fusion policy giữa contribution component và provider component, không làm mất provenance.
-- [ ] Hiển thị vibe dimensions, report count và confidence.
-- [ ] Unit test aggregation/confidence.
+- [x] Viết provider adapters và normalize signal theo field/storage allowlist của từng nguồn — bốn adapter fixture-first, provenance mapping và fail-closed storage policy đã có; live transport/coverage gate vẫn deferred.
+- [x] OSM opening-hours enrichment — Overpass lookup, name/distance matching, v1 same-day normalizer, guarded `--dry-run` import và `openstreetmap` provenance đã có; calendar/overnight rules vẫn deferred.
+- [x] Implement fusion policy giữa contribution component và provider component, không làm mất provenance — read-path fusion trả một `canonical` result, provider ranking flag tắt mặc định, synthetic không trộn với provider và response giữ source/provider counts.
+- [x] Hiển thị vibe dimensions, report count và confidence — Explore nhận canonical snapshots theo batch; card dùng snapshot để rank/hiển thị, Place Detail hiển thị đủ sáu chiều theo khung giờ và có empty/error state.
+- [x] Unit test aggregation/confidence — coverage cho grouping/median, missing dimensions, provenance, confidence thresholds, synthetic isolation và provider fusion edge cases.
+
+Policy nguồn và nguyên tắc chỉ hiển thị một kết quả Chốn vibe được ghi tại
+`docs/vibe-data-policy.md`.
 
 ### Demo
 
@@ -102,12 +106,14 @@ Chi tiết phase, boundary và gate: `docs/backend-extraction-plan.md`.
 
 ## Sprint 4 — Discovery và ranking
 
-- [ ] Bộ chọn khu vực hybrid, thời gian chính xác và tám mục đích.
-- [ ] Bộ lọc quy mô, tiện ích và khoảng giá.
-- [ ] Mapping purpose sang preference weights mặc định.
-- [ ] Explainable ranking phiên bản 1.
-- [ ] Hiển thị lý do phù hợp/điểm cần lưu ý.
-- [ ] Lưu filter vào URL để chia sẻ và đo analytics.
+Trạng thái: **hoàn thành ngày 2026-08-16** — bộ chọn khu vực, bộ lọc metadata, preference weights, explainable ranking, chia sẻ URL và analytics Explore đã hoàn thành.
+
+- [x] Bộ chọn khu vực hybrid, thời gian chính xác và tám mục đích — tìm kiếm trong dataset, quick district, geolocation/radius qua spatial API, chọn tâm trên bản đồ, ngày/giờ/thời lượng và mapping về `dayType`/`timeBucket`.
+- [x] Bộ lọc quy mô, tiện ích và khoảng giá — contract/API trả metadata, domain lọc deterministic (tiện ích AND, khoảng giá overlap), UI responsive có trạng thái rỗng và xóa bộ lọc.
+- [x] Mapping purpose sang preference weights mặc định — tám mục đích có target score và trọng số theo sáu chiều vibe; weighted score được chuẩn hóa về 0–100.
+- [x] Explainable ranking phiên bản 1 — sinh explanation deterministic từ target/weight, hiển thị tối đa hai lý do và một lưu ý theo mục đích.
+- [x] Hiển thị lý do phù hợp/điểm cần lưu ý — card Explore phân biệt lý do, lưu ý và trạng thái chưa đủ dữ liệu vibe.
+- [x] Lưu filter vào URL để chia sẻ và đo analytics — canonical query, Clipboard share, anonymous context events và API persistence đã có; tọa độ không lưu vì privacy.
 
 ### Demo
 
@@ -163,7 +169,7 @@ Chỉ ưu tiên dựa trên dữ liệu beta:
 - Vibe heatmap theo khu vực.
 - Recommendation cá nhân hóa.
 - Chủ địa điểm xác minh profile và xem insight.
-- Admin Dashboard cho POI, import và moderation.
+- Admin Dashboard cho service-area/boundary, POI import và moderation.
 - Mở rộng sang khu vực hoặc loại địa điểm mới.
 
 ## Backlog ưu tiên P0

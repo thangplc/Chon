@@ -5,7 +5,7 @@ import { fetchBackendJson } from "@/lib/backend-api";
 
 import { type ExploreDataset } from "../domain/explore-contract";
 
-export async function getSimulatedExploreDataset(): Promise<ExploreDataset> {
+export async function getExploreDataset(): Promise<ExploreDataset> {
   const response = await fetchBackendJson(
     "/v1/explore/simulated",
     exploreDatasetResponseSchema,

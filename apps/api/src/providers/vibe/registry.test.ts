@@ -6,6 +6,7 @@ import { createProviderVibeRegistry } from "./registry";
 describe("ProviderVibeRegistry", () => {
   it("does not initialize adapters eagerly", () => {
     const googleFactory = vi.fn(() => ({
+      normalize: vi.fn(() => []),
       provider: "google_places" as const,
     }));
     const config = readProviderVibeConfig({
@@ -32,6 +33,7 @@ describe("ProviderVibeRegistry", () => {
 
   it("initializes an enabled adapter once and reuses it", () => {
     const googleFactory = vi.fn(() => ({
+      normalize: vi.fn(() => []),
       provider: "google_places" as const,
     }));
     const config = readProviderVibeConfig({

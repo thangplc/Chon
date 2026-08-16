@@ -20,6 +20,45 @@ describe("API environment", () => {
 
     expect(environment.API_PORT).toBe(3001);
     expect(environment.API_CORS_ORIGINS).toBe("http://localhost:3000");
+    expect(environment.EXPLORE_INCLUDE_REAL_PLACES).toBe(false);
+    expect(environment.EXPLORE_PLACE_DATA_MODE).toBe("synthetic");
+    expect(environment.EXPLORE_PLACE_METADATA_MODE).toBe("synthetic");
+  });
+
+  it("parses the real-place Explore rollout flag", () => {
+    const environment = validateApiEnvironment({
+      ...databaseEnvironment,
+      EXPLORE_INCLUDE_REAL_PLACES: "true",
+    });
+
+    expect(environment.EXPLORE_INCLUDE_REAL_PLACES).toBe(true);
+    expect(environment.EXPLORE_PLACE_DATA_MODE).toBe("mixed");
+  });
+
+  it("supports an explicit real-only Explore dataset", () => {
+    const environment = validateApiEnvironment({
+      ...databaseEnvironment,
+      EXPLORE_INCLUDE_REAL_PLACES: "true",
+      EXPLORE_PLACE_DATA_MODE: "real",
+    });
+
+    expect(environment.EXPLORE_PLACE_DATA_MODE).toBe("real");
+  });
+
+  it("rejects synthetic metadata overlays in production", () => {
+    expect(() =>
+      validateApiEnvironment({
+        ...databaseEnvironment,
+        API_CORS_ORIGINS: "https://chon.example",
+        API_HOST: "0.0.0.0",
+        API_PORT: "8080",
+        DATA_IMPORT_TARGET_ENVIRONMENT: "production",
+        DATABASE_SSL: "true",
+        DATABASE_PASSWORD: "production-password",
+        EXPLORE_PLACE_DATA_MODE: "real",
+        EXPLORE_PLACE_METADATA_MODE: "synthetic",
+      }),
+    ).toThrow("Production requires EXPLORE_PLACE_METADATA_MODE=real");
   });
 
   it("requires API deployment values in production", () => {

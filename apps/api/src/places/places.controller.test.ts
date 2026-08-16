@@ -83,7 +83,7 @@ describe("PlacesController", () => {
     );
   });
 
-  it("returns time-context vibe snapshots", async () => {
+  it("returns canonical time-context vibe snapshots", async () => {
     findByPlaceSlug.mockResolvedValue({
       placeId: "22222222-2222-4222-8222-222222222222",
       snapshots: [],

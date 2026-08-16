@@ -25,8 +25,10 @@ Tài liệu chi tiết hỗ trợ:
 - [Roadmap theo sprint](ROADMAP.md)
 - [Sprint 0 review pack](SPRINT-0-REVIEW.md)
 - [Sprint 1 provider spike](PROVIDER-SPIKE.md)
+- [Kế hoạch tích hợp VIETMAP POI](docs/vietmap-poi-integration-plan.md)
 - [Provider vibe terms/credential/coverage spike](docs/provider-vibe-spike.md)
 - [Vibe taxonomy](docs/vibe-taxonomy.md)
+- [Vibe data policy](docs/vibe-data-policy.md)
 - [Purpose profiles](docs/purpose-profiles.md)
 - [Prototype specification](docs/prototype-spec.md)
 - [Data contract](docs/data-contract.md)
@@ -74,6 +76,10 @@ NEXT_PUBLIC_MAPTILER_STYLE_ID=streets-v4
 BACKEND_API_URL=http://127.0.0.1:3001
 ```
 
+Explore local mặc định dùng seed giả lập. Sau khi đã import và verify POI thật,
+đặt `EXPLORE_PLACE_DATA_MODE=real` trong `apps/api/.env` rồi restart API để chỉ
+hiển thị địa điểm thật; `mixed` dùng cả hai nguồn.
+
 MapTiler key là browser key công khai và phải được giới hạn allowed origins trong MapTiler Cloud. Khi thiếu key, Explore fail-safe sang danh sách và không khởi tạo bản đồ.
 
 Quality checks:
@@ -105,6 +111,20 @@ pnpm data:import seed --dir data/fixtures --environment local --dry-run
 pnpm data:import seed --dir data/fixtures --environment local
 pnpm data:verify
 ```
+
+Import POI cafe thật từ VIETMAP được hướng dẫn tại
+[`apps/api/README.md`](apps/api/README.md#vietmap-poi-sync) và
+[`docs/vietmap-poi-integration-plan.md`](docs/vietmap-poi-integration-plan.md).
+Luồng an toàn bắt đầu bằng dry-run:
+
+```bash
+pnpm vietmap:poi:sync \
+  --areas q1,q3,binh-thanh \
+  --category 1001-1 \
+  --dry-run
+```
+
+Chỉ bỏ `--dry-run` sau khi summary hợp lệ và muốn ghi POI vào database local.
 
 NestJS, Drizzle, Docker Compose và các data/operator script cùng đọc
 `apps/api/.env`. Next.js chỉ đọc `apps/web/.env`; không đặt database credential
@@ -139,6 +159,10 @@ pnpm spatial:verify
 ```
 
 Chi tiết contract và giới hạn tại [Spatial place query](docs/spatial-place-query.md).
+
+Explore lưu bộ lọc vào URL canonical để chia sẻ và gửi analytics context đã
+ẩn danh. Chi tiết tham số, privacy boundary và endpoint tại
+[Explore sharing và analytics](docs/explore-sharing-analytics.md).
 
 Xem quy trình migration và nguyên tắc an toàn tại [Database runbook](docs/database.md).
 

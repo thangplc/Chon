@@ -23,6 +23,14 @@ export type PlaceOpeningHours = Readonly<{
   weekly: Readonly<Record<Weekday, readonly OpeningHoursPeriod[]>>;
 }>;
 
+export type PlaceMetadataSource = "canonical" | "synthetic";
+
+export type PlaceMetadata = Readonly<{
+  isSimulated: boolean;
+  label: string;
+  source: PlaceMetadataSource;
+}>;
+
 export type PlaceDetailArea = Readonly<{
   description: string | null;
   id: string;
@@ -50,6 +58,8 @@ export type PlaceDetail = Readonly<{
   estimatedCapacity: number | null;
   id: string;
   isSimulated: boolean;
+  metadata: PlaceMetadata;
+  amenities: readonly string[];
   latitude: number;
   longitude: number;
   media: readonly PlaceDetailMedia[];
@@ -57,6 +67,7 @@ export type PlaceDetail = Readonly<{
   openingHours: PlaceOpeningHours | null;
   priceLevel: PriceLevel | null;
   sizeCategory: SizeCategory;
+  spaceNote: string | null;
   slug: string;
   typicalSpendMax: number | null;
   typicalSpendMin: number | null;

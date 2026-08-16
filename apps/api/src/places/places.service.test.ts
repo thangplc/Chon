@@ -78,4 +78,70 @@ describe("PlacesService place detail", () => {
       }),
     );
   });
+
+  it("merges a synthetic overlay for a real POI only in synthetic metadata mode", async () => {
+    const select = vi
+      .fn()
+      .mockReturnValueOnce(
+        selection([
+          {
+            address: "12 Đường Real",
+            currency: "VND",
+            description: null,
+            district: "Quận 3",
+            estimatedCapacity: null,
+            id: "33333333-3333-4333-8333-333333333333",
+            isSimulated: false,
+            location: { latitude: 10.78, longitude: 106.687 },
+            name: "Real Test",
+            openingHours: null,
+            priceLevel: null,
+            sizeCategory: "unknown",
+            slug: "real-test",
+            typicalSpendMax: null,
+            typicalSpendMin: null,
+          },
+        ]),
+      )
+      .mockReturnValueOnce(
+        selection([
+          {
+            amenities: ["Wi-Fi"],
+            currency: "VND",
+            estimatedCapacity: 40,
+            openingHours: null,
+            priceLevel: 2,
+            sizeCategory: "medium",
+            spaceNote: "Khu trong nhà minh họa.",
+            typicalSpendMax: 90_000,
+            typicalSpendMin: 45_000,
+          },
+        ]),
+      )
+      .mockReturnValueOnce(selection([]))
+      .mockReturnValueOnce(selection([]));
+    const service = new PlacesService(
+      { select } as unknown as ChonDatabase,
+      {} as never,
+    );
+
+    await expect(
+      service.findDetailBySlug("real-test", "local", "synthetic"),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        amenities: ["Wi-Fi"],
+        estimatedCapacity: 40,
+        metadata: {
+          isSimulated: true,
+          label: "Dữ liệu minh họa — chưa xác minh",
+          source: "synthetic",
+        },
+        priceLevel: 2,
+        sizeCategory: "medium",
+        spaceNote: "Khu trong nhà minh họa.",
+        typicalSpendMax: 90_000,
+        typicalSpendMin: 45_000,
+      }),
+    );
+  });
 });

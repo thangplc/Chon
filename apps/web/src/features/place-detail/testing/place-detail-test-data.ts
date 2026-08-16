@@ -16,6 +16,12 @@ export const placeDetailTestData: PlaceDetail = {
   estimatedCapacity: 40,
   id: "test-place-id",
   isSimulated: true,
+  metadata: {
+    isSimulated: true,
+    label: "Dữ liệu minh họa — chưa xác minh",
+    source: "synthetic",
+  },
+  amenities: ["Wi-Fi", "Ổ cắm điện"],
   latitude: 10.78,
   longitude: 106.687,
   media: [
@@ -57,6 +63,7 @@ export const placeDetailTestData: PlaceDetail = {
   },
   priceLevel: 2,
   sizeCategory: "medium",
+  spaceNote: "Có khu trong nhà yên tĩnh.",
   slug: "goc-test",
   typicalSpendMax: 90_000,
   typicalSpendMin: 45_000,

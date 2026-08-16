@@ -1,6 +1,15 @@
 import type { ProviderVibeConfig, ProviderVibeProvider } from "./config";
+import type {
+  ProviderVibeNormalizationContext,
+  ProviderVibeSignalInput,
+} from "./normalizer";
+import { createProviderVibeAdapterFactories } from "./adapters";
 
 export type ProviderVibeAdapter = Readonly<{
+  normalize(
+    payload: unknown,
+    context: ProviderVibeNormalizationContext,
+  ): readonly ProviderVibeSignalInput[];
   provider: ProviderVibeProvider;
 }>;
 
@@ -29,7 +38,7 @@ export class ProviderVibeRegistry {
 
   constructor(
     config: ProviderVibeConfig,
-    factories: ProviderVibeAdapterFactories = {},
+    factories: ProviderVibeAdapterFactories = createProviderVibeAdapterFactories(),
   ) {
     this.#config = config;
     this.#factories = factories;
@@ -111,7 +120,7 @@ export class ProviderVibeRegistry {
 
 export function createProviderVibeRegistry(
   config: ProviderVibeConfig,
-  factories: ProviderVibeAdapterFactories = {},
+  factories: ProviderVibeAdapterFactories = createProviderVibeAdapterFactories(),
 ): ProviderVibeRegistry {
   return new ProviderVibeRegistry(config, factories);
 }

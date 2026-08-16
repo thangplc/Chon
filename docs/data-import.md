@@ -7,6 +7,7 @@ CLI hiện hỗ trợ ba luồng:
 - `boundary`: validate/import GeoJSON ranh giới có version vào PostGIS.
 - `poi`: validate/import cặp `places.csv` và `place-sources.csv` đã normalize.
 - `seed`: validate/import một thư mục gồm `places.csv`, `place-areas.csv` tùy chọn, `place-media.csv` tùy chọn và các file `*-vibe-reports.csv`.
+- `metadata:synthetic:import`: validate/upsert metadata giả lập vào bảng overlay riêng cho POI thật.
 
 Production import **fail-closed theo record**: chỉ nhận dữ liệu thật và chỉ nhận vibe report `editorial` hoặc `community`. `synthetic`, `research` và mọi record `is_simulated=true` bị từ chối trước khi query dữ liệu hiện có hoặc thực hiện database write.
 
@@ -43,6 +44,27 @@ pnpm data:import seed --dir data/fixtures --dry-run --json
 
 Summary chứa import ID, contract version, checksum từng file, environment, operator, create/update/unchanged/conflict/reject, warning và phân bố `data_type`. Dry-run có `Database writes: 0`. `opening_hours` được parse và kiểm tra theo contract lịch thường lệ v1 trước khi lập kế hoạch ghi.
 
+### Synthetic metadata overlay cho POI thật
+
+Không ghi các giá trị giả lập vào `places`. Dùng template
+`data/templates/place-metadata-overlays.csv` với `place_id` là
+`places.internal_id`:
+
+```bash
+pnpm metadata:synthetic:import \
+  --file path/to/place-metadata-overlays.csv \
+  --environment local --dry-run --json
+pnpm metadata:synthetic:import \
+  --file path/to/place-metadata-overlays.csv \
+  --environment local
+```
+
+Importer chỉ nhận POI `published` và `is_simulated=false`, rồi upsert theo
+`(place_id, environment)`. `real` bỏ qua overlay; `mixed` chỉ dùng overlay cho
+field canonical đang thiếu; `synthetic` dùng overlay để test UI. Production bị
+chặn cả ở importer lẫn API config. Web hiển thị nhãn `Dữ liệu minh họa — chưa
+xác minh` khi một overlay được sử dụng.
+
 Có thể kiểm tra production policy an toàn bằng dry-run trước khi import thật:
 
 ```bash
@@ -76,6 +98,10 @@ data/fixtures/*.csv → seed importer → PostgreSQL → Explore repository → 
 
 CSV fixture là dữ liệu giả lập, kể cả các report mang `data_type=community`. Chúng luôn giữ `is_simulated=true`, chỉ được Explore repository đọc khi `DATA_IMPORT_TARGET_ENVIRONMENT` là `local`, `ci` hoặc `staging`, và bị production importer từ chối.
 
+Explore lọc nguồn qua `EXPLORE_PLACE_DATA_MODE`: `synthetic` chỉ đọc fixture,
+`mixed` đọc cả fixture và POI thật, còn `real` chỉ đọc place/report có
+`is_simulated=false`. Đổi mode cần restart API.
+
 `places.csv` giữ mức giá, quy mô, sức chứa và lịch mở cửa thường lệ. `place-areas.csv` giữ các khu vực con trong quán. Cả hai đều đi qua cùng seed transaction; UI Place Detail chỉ đọc dữ liệu đã import từ PostgreSQL.
 
 `place-media.csv` dùng cùng transaction seed. Importer kiểm tra place/area ownership, stable `media_id`, một `sort_order` duy nhất trong khoảng `0–4`, đúng một trong `storage_key`/`source_url`, moderation và quyền sử dụng. Media `source_type=synthetic` bắt buộc `is_simulated=true`, `storage_key` local và `rights_status=verified`; production policy từ chối record simulated trước khi query DB.
@@ -88,6 +114,7 @@ Provider POI đang được cấu hình trong MVP:
 
 ```text
 fsq_os_places
+openstreetmap
 ```
 
 Mỗi POI trong `places.csv` bắt buộc có ít nhất một record tương ứng trong `place-sources.csv`:
@@ -105,6 +132,19 @@ Quy tắc mapping:
 - Snapshot cũ hơn chỉ tạo warning và không làm lùi provenance đang lưu.
 - Provider ID đổi hoặc bị gán sang place khác tạo conflict; importer không tự remap/merge.
 - `raw_data` chỉ được lưu bởi adapter khi provider terms cho phép; CSV importer hiện để field này `NULL`.
+
+OSM có pipeline riêng cho metadata giờ mở cửa, không cần API key:
+
+```bash
+OSM_OPENING_HOURS_ENABLED=true \
+pnpm osm:opening-hours:sync --dry-run --environment local --json
+```
+
+Pipeline gọi Overpass theo batch, match POI bằng tên + khoảng cách, chỉ nhận
+subset `opening_hours` regular cùng ngày của contract v1, và chỉ ghi khi
+`places.opening_hours` còn trống. Mapping OSM và raw tags tối thiểu được lưu
+trong `place_sources`; `24/7`, overnight và lịch theo ngày lễ bị bỏ qua để
+không suy diễn sai. Xem thêm [API OSM enrichment guide](../apps/api/README.md#osm-opening-hours-enrichment).
 
 ## Boundary
 

@@ -4,6 +4,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { placeDetailTestData } from "../testing/place-detail-test-data";
 import { PlaceDetailView } from "./place-detail-view";
 
+const canonicalVibe = {
+  aggregationVersion: "fusion-v1",
+  component: "canonical" as const,
+  confidence: { level: "medium" as const, score: 0.6 },
+  dayType: "weekday" as const,
+  generatedAt: new Date("2026-08-16T03:00:00Z"),
+  isSimulated: false,
+  lastReportAt: new Date("2026-08-16T03:00:00Z"),
+  placeAreaId: null,
+  placeId: "22222222-2222-4222-8222-222222222222",
+  providerSignalCount: 1,
+  reportCount: 3,
+  scores: {
+    crowd: 2,
+    lighting: 3,
+    noise: 1,
+    privacy: 4,
+    socialEnergy: 2,
+    workability: 5,
+  },
+  sourceDataTypes: ["community" as const],
+  sourceProviders: ["foursquare_places"],
+  timeBucket: "morning" as const,
+};
+
 const back = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -51,10 +76,12 @@ describe("PlaceDetailView", () => {
         place={{
           ...placeDetailTestData,
           areas: [],
+          amenities: [],
           estimatedCapacity: null,
           openingHours: null,
           priceLevel: null,
           sizeCategory: "unknown",
+          spaceNote: null,
           typicalSpendMax: null,
           typicalSpendMin: null,
         }}
@@ -84,5 +111,39 @@ describe("PlaceDetailView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Trở về Explore" }));
 
     expect(back).toHaveBeenCalledOnce();
+  });
+
+  it("offers canonical full-page navigation from the drawer", () => {
+    render(
+      <PlaceDetailView
+        mapStyleUrl={null}
+        place={placeDetailTestData}
+        presentation="drawer"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Mở toàn trang/ })).toHaveAttribute(
+      "href",
+      "/places/goc-test",
+    );
+  });
+
+  it("renders canonical dimensions, confidence and evidence counts", () => {
+    render(
+      <PlaceDetailView
+        mapStyleUrl={null}
+        place={placeDetailTestData}
+        vibeSnapshots={[canonicalVibe]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Chốn vibe" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Tin cậy trung bình")).toBeInTheDocument();
+    expect(screen.getByText("3 góp ý · 1 nguồn bổ trợ")).toBeInTheDocument();
+    expect(screen.getByText("Ồn")).toBeInTheDocument();
+    expect(screen.getByText("Làm việc")).toBeInTheDocument();
+    expect(screen.getByText("5.0/5")).toBeInTheDocument();
   });
 });

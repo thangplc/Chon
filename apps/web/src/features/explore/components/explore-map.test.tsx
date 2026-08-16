@@ -31,6 +31,7 @@ const maplibreMocks = vi.hoisted(() => ({
     off: ReturnType<typeof vi.fn>;
     queryRenderedFeatures: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
+    unproject: ReturnType<typeof vi.fn>;
   }>,
   markerInstances: [] as Array<{
     element: HTMLElement;
@@ -105,6 +106,7 @@ vi.mock("maplibre-gl", () => {
     });
     queryRenderedFeatures = vi.fn(() => maplibreMocks.renderedFeatures);
     remove = vi.fn();
+    unproject = vi.fn(() => ({ lat: 10.79, lng: 106.71 }));
 
     constructor() {
       maplibreMocks.mapInstances.push(this);
@@ -296,6 +298,32 @@ describe("ExploreMap", () => {
         zoom: 15,
       });
     });
+  });
+
+  it("emits a map coordinate when location selection mode is enabled", async () => {
+    const onSelectLocation = vi.fn();
+    render(
+      <ExploreMap
+        locationSelectionEnabled
+        mapStyleUrl="https://example.test/style.json"
+        onSelectLocation={onSelectLocation}
+        onSelectPlace={vi.fn()}
+        places={places}
+        selectedPlaceId={null}
+      />,
+    );
+    const map = maplibreMocks.mapInstances[0];
+    await waitFor(() => expect(map.addLayer).toHaveBeenCalledTimes(4));
+
+    act(() => map.emit("click"));
+
+    expect(onSelectLocation).toHaveBeenCalledWith({
+      latitude: 10.79,
+      longitude: 106.71,
+    });
+    expect(
+      screen.getByText("Bấm bản đồ để chọn tâm tìm kiếm"),
+    ).toBeInTheDocument();
   });
 
   it("publishes the current viewport after load and map movement", async () => {
