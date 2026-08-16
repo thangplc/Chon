@@ -89,6 +89,11 @@ export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
       <h2 id="place-facts-title" className="text-lg font-bold">
         Thông tin địa điểm
       </h2>
+      {place.metadata.isSimulated && (
+        <p className="mt-2 text-xs font-semibold text-[#8b5a2b]">
+          {place.metadata.label}
+        </p>
+      )}
       <div className="mt-4 grid gap-3">
         <section
           aria-labelledby="opening-hours-title"
@@ -160,7 +165,10 @@ export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
           <h3 id="space-title" className="font-bold">
             Không gian trong quán
           </h3>
-          {hasSpaceSummary || place.areas.length > 0 ? (
+          {hasSpaceSummary ||
+          place.areas.length > 0 ||
+          place.spaceNote !== null ||
+          place.amenities.length > 0 ? (
             <div className="mt-2 space-y-3 text-sm">
               {hasSpaceSummary && (
                 <p className="text-[#5e746a]">
@@ -190,6 +198,24 @@ export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
                 <p className="text-[#6b7d74]">
                   Chưa có danh sách khu vực đã xác minh.
                 </p>
+              )}
+              {place.spaceNote && (
+                <p className="text-[#5e746a]">{place.spaceNote}</p>
+              )}
+              {place.amenities.length > 0 && (
+                <div>
+                  <p className="font-semibold">Tiện ích</p>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {place.amenities.map((amenity) => (
+                      <li
+                        className="rounded-lg bg-white/70 px-2 py-1 text-xs text-[#42645a]"
+                        key={amenity}
+                      >
+                        {amenity}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           ) : (

@@ -3,17 +3,23 @@ import { PlaceDetailBackControl } from "./place-detail-back-control";
 import { PlaceDetailMap } from "./place-detail-map";
 import { PlaceFacts } from "./place-facts";
 import { PlaceGallery } from "./place-gallery";
+import { PlaceVibeSummary } from "./place-vibe-summary";
+import type { VibeSnapshotApiItem } from "@chon/contracts/backend";
 
 type PlaceDetailViewProps = Readonly<{
   mapStyleUrl: string | null;
   place: PlaceDetail;
   presentation?: "page" | "drawer";
+  vibeError?: boolean;
+  vibeSnapshots?: readonly VibeSnapshotApiItem[];
 }>;
 
 export function PlaceDetailView({
   mapStyleUrl,
   place,
   presentation = "page",
+  vibeError = false,
+  vibeSnapshots = [],
 }: PlaceDetailViewProps) {
   return (
     <article
@@ -26,6 +32,11 @@ export function PlaceDetailView({
       {place.isSimulated && (
         <div className="bg-[#f4c96b] px-4 py-2 text-center text-xs font-bold tracking-[0.12em] text-amber-950 uppercase">
           Địa điểm và hình ảnh đang là dữ liệu giả lập
+        </div>
+      )}
+      {!place.isSimulated && place.metadata.isSimulated && (
+        <div className="bg-[#f4c96b] px-4 py-2 text-center text-xs font-bold tracking-[0.12em] text-amber-950 uppercase">
+          {place.metadata.label}
         </div>
       )}
 
@@ -51,10 +62,17 @@ export function PlaceDetailView({
           </p>
           <p className="mt-5 flex items-start gap-2 text-sm text-[#f8f3e8]">
             <span aria-hidden="true">⌖</span>
-            <span>
-              {place.address}, {place.district}
-            </span>
+            <span>{place.address}</span>
           </p>
+          {presentation === "drawer" && (
+            <a
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#f4c96b] px-4 py-2.5 text-sm font-bold text-[#173f33] shadow-sm transition-colors hover:bg-[#f7d98b] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#f8f3e8]"
+              href={`/places/${encodeURIComponent(place.slug)}`}
+            >
+              Mở toàn trang
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
         </header>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
@@ -67,6 +85,7 @@ export function PlaceDetailView({
               name={place.name}
             />
             <PlaceFacts place={place} />
+            <PlaceVibeSummary error={vibeError} snapshots={vibeSnapshots} />
           </div>
         </div>
       </div>

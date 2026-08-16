@@ -3,11 +3,11 @@ import { connection } from "next/server";
 
 import { getPublicMapConfiguration } from "@/config/map";
 import { ExploreExperience } from "@/features/explore/components/explore-experience";
-import { getSimulatedExploreDataset } from "@/features/explore/data/explore-repository";
+import { getExploreDataset } from "@/features/explore/data/explore-repository";
 
 async function ExploreFromDatabase() {
   await connection();
-  const dataset = await getSimulatedExploreDataset();
+  const dataset = await getExploreDataset();
   const mapConfiguration = getPublicMapConfiguration();
 
   return (
@@ -24,7 +24,7 @@ function ExploreLoading() {
       <div>
         <p className="text-sm font-bold tracking-[0.14em] uppercase">Chốn</p>
         <p className="mt-2 text-sm text-[#5e746a]">
-          Đang đọc dữ liệu giả lập từ PostgreSQL…
+          Đang đọc dữ liệu Explore từ PostgreSQL…
         </p>
       </div>
     </main>

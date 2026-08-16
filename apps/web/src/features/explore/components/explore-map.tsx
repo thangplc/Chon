@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ExplorePlace } from "../domain/explore";
 import {
   type GeolocationStatus,
+  type UserLocation,
   useGeolocation,
 } from "../hooks/use-geolocation";
 
@@ -48,9 +49,17 @@ function geolocationButtonLabel(status: GeolocationStatus): string {
 }
 
 type ExploreMapProps = Readonly<{
+  locationSelectionEnabled?: boolean;
   mapStyleUrl: string | null;
+  onSelectLocation?: (
+    location: Readonly<{
+      latitude: number;
+      longitude: number;
+    }>,
+  ) => void;
   onStatusChange?: (status: ExploreMapStatus) => void;
   onSelectPlace: (placeId: string) => void;
+  onUserLocationChange?: (location: UserLocation) => void;
   onViewportChange?: (bounds: MapViewportBounds) => void;
   places: readonly ExplorePlace[];
   selectedPlaceId: string | null;
@@ -90,8 +99,11 @@ function createPlaceFeatureCollection(
 }
 
 export function ExploreMap({
+  locationSelectionEnabled = false,
   mapStyleUrl,
+  onSelectLocation,
   onSelectPlace,
+  onUserLocationChange,
   onStatusChange,
   onViewportChange,
   places,
@@ -99,6 +111,8 @@ export function ExploreMap({
 }: ExploreMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectPlaceRef = useRef(onSelectPlace);
+  const onSelectLocationRef = useRef(onSelectLocation);
+  const onUserLocationChangeRef = useRef(onUserLocationChange);
   const onViewportChangeRef = useRef(onViewportChange);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
@@ -117,6 +131,14 @@ export function ExploreMap({
   useEffect(() => {
     onSelectPlaceRef.current = onSelectPlace;
   }, [onSelectPlace]);
+
+  useEffect(() => {
+    onSelectLocationRef.current = onSelectLocation;
+  }, [onSelectLocation]);
+
+  useEffect(() => {
+    onUserLocationChangeRef.current = onUserLocationChange;
+  }, [onUserLocationChange]);
 
   useEffect(() => {
     onStatusChange?.(mapStyleUrl ? mapStatus : "unconfigured");
@@ -290,31 +312,40 @@ export function ExploreMap({
       const clusterFeature = features.find(
         (feature) => feature.properties?.cluster_id !== undefined,
       );
-      if (!clusterFeature || clusterFeature.geometry.type !== "Point") return;
+      if (clusterFeature && clusterFeature.geometry.type === "Point") {
+        const clusterId = Number(clusterFeature.properties?.cluster_id);
+        if (!Number.isInteger(clusterId)) return;
 
-      const clusterId = Number(clusterFeature.properties?.cluster_id);
-      if (!Number.isInteger(clusterId)) return;
+        const source = mapInstance.getSource(
+          placeSourceId,
+        ) as maplibregl.GeoJSONSource;
+        void source
+          .getClusterExpansionZoom(clusterId)
+          .then((zoom) => {
+            mapInstance.easeTo({
+              center: clusterFeature.geometry.coordinates as [number, number],
+              duration: 450,
+              zoom,
+            });
+          })
+          .catch(() => undefined);
+        return;
+      }
 
-      const source = mapInstance.getSource(
-        placeSourceId,
-      ) as maplibregl.GeoJSONSource;
-      void source
-        .getClusterExpansionZoom(clusterId)
-        .then((zoom) => {
-          mapInstance.easeTo({
-            center: clusterFeature.geometry.coordinates as [number, number],
-            duration: 450,
-            zoom,
-          });
-        })
-        .catch(() => undefined);
+      if (locationSelectionEnabled) {
+        const location = mapInstance.unproject(event.point);
+        onSelectLocationRef.current?.({
+          latitude: location.lat,
+          longitude: location.lng,
+        });
+      }
     };
     mapInstance.on("click", handleMapClick);
 
     return () => {
       mapInstance.off("click", handleMapClick);
     };
-  }, [mapInstance, mapStatus]);
+  }, [locationSelectionEnabled, mapInstance, mapStatus]);
 
   useEffect(() => {
     if (!mapInstance || mapStatus !== "ready") return;
@@ -361,6 +392,8 @@ export function ExploreMap({
 
   useEffect(() => {
     if (!location || !mapInstance) return;
+
+    onUserLocationChangeRef.current?.(location);
 
     userMarkerRef.current?.remove();
     const element = document.createElement("div");
@@ -455,6 +488,12 @@ export function ExploreMap({
           {geolocationMessages[geolocationStatus]}
         </p>
       </div>
+
+      {locationSelectionEnabled && (
+        <div className="absolute top-3 right-3 z-20 rounded-xl bg-[#f4c96b] px-3 py-2 text-xs font-bold text-[#173f33] shadow-md">
+          Bấm bản đồ để chọn tâm tìm kiếm
+        </div>
+      )}
 
       {mapStatus === "ready" && places.length > 0 && (
         <div

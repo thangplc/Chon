@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPublicMapConfiguration } from "@/config/map";
 import { PlaceDetailView } from "@/features/place-detail/components/place-detail-view";
 import { loadPlaceDetailBySlug } from "@/features/place-detail/data/place-detail-loader";
+import { loadPlaceVibeBySlug } from "@/features/place-detail/data/place-vibe-loader";
 
 type PlaceDetailPageProps = Readonly<{
   params: Promise<Readonly<{ slug: string }>>;
@@ -33,13 +34,18 @@ export default async function PlaceDetailPage({
   params,
 }: PlaceDetailPageProps) {
   const { slug } = await params;
-  const place = await readPublishedPlace(slug);
+  const [place, vibeResult] = await Promise.all([
+    readPublishedPlace(slug),
+    loadPlaceVibeBySlug(slug).catch(() => null),
+  ]);
   if (!place) notFound();
 
   return (
     <PlaceDetailView
       mapStyleUrl={getPublicMapConfiguration().styleUrl}
       place={place}
+      vibeError={vibeResult === null}
+      vibeSnapshots={vibeResult ?? []}
     />
   );
 }

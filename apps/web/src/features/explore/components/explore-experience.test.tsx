@@ -5,9 +5,23 @@ import type { ExplorePlace } from "../domain/explore";
 import { exploreTestDataset } from "../testing/explore-test-dataset";
 import { ExploreExperience } from "./explore-experience";
 
+vi.mock("../analytics/explore-analytics", () => ({
+  trackExploreEvent: vi.fn(),
+}));
+
 type MockExploreMapProps = Readonly<{
+  locationSelectionEnabled?: boolean;
   mapStyleUrl: string | null;
+  onSelectLocation?: (location: {
+    latitude: number;
+    longitude: number;
+  }) => void;
   onSelectPlace: (placeId: string) => void;
+  onUserLocationChange?: (location: {
+    accuracy: number;
+    latitude: number;
+    longitude: number;
+  }) => void;
   onStatusChange?: (
     status: "unconfigured" | "loading" | "ready" | "error",
   ) => void;
@@ -23,8 +37,11 @@ type MockExploreMapProps = Readonly<{
 
 vi.mock("./explore-map", () => ({
   ExploreMap: ({
+    locationSelectionEnabled,
     mapStyleUrl,
+    onSelectLocation,
     onSelectPlace,
+    onUserLocationChange,
     onStatusChange,
     onViewportChange,
     places,
@@ -48,6 +65,28 @@ vi.mock("./explore-map", () => ({
           >
             Di chuyển bản đồ
           </button>
+          {locationSelectionEnabled && (
+            <button
+              onClick={() =>
+                onSelectLocation?.({ latitude: 10.775, longitude: 106.699 })
+              }
+              type="button"
+            >
+              Chọn tâm trên bản đồ
+            </button>
+          )}
+          <button
+            onClick={() =>
+              onUserLocationChange?.({
+                accuracy: 20,
+                latitude: 10.775,
+                longitude: 106.699,
+              })
+            }
+            type="button"
+          >
+            Mô phỏng vị trí hiện tại
+          </button>
           <button onClick={() => onStatusChange?.("error")} type="button">
             Báo lỗi bản đồ
           </button>
@@ -70,6 +109,8 @@ const originalScrollIntoView = Element.prototype.scrollIntoView;
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(navigator, "clipboard");
+  window.history.replaceState(null, "", "/");
   if (originalScrollIntoView) {
     Element.prototype.scrollIntoView = originalScrollIntoView;
   } else {
@@ -114,11 +155,74 @@ describe("ExploreExperience", () => {
     ).toHaveAttribute("href", "/places/goc-test-01");
     expect(screen.getByText("Bản đồ chưa được cấu hình")).toBeInTheDocument();
     expect(
-      screen.getByRole("complementary", { name: "Nguồn dữ liệu vibe" }),
+      screen.getByRole("complementary", { name: "Nguồn dữ liệu" }),
     ).toHaveClass("lg:absolute");
     expect(
       screen.getByRole("region", { name: "Bản đồ các địa điểm" }).parentElement,
     ).toHaveClass("self-start", "lg:sticky", "lg:top-4");
+  });
+
+  it("hydrates shareable filters from the URL", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?purpose=date&date=2026-08-17&time=19:30&duration=180&district=q1&size=large&q=Đèn",
+    );
+
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    expect(
+      await screen.findByRole("region", { name: "1 Chốn để thử" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Khu vực")).toHaveValue("Quận 1");
+    expect(screen.getByLabelText("Ngày ghé")).toHaveValue("2026-08-17");
+    expect(screen.getByLabelText("Giờ chính xác")).toHaveValue("19:30");
+    expect(screen.getByLabelText("Thời lượng ngồi")).toHaveValue("180");
+    expect(screen.getByRole("button", { name: "Hẹn hò" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText("Quy mô Lớn")).toBeChecked();
+    expect(screen.getByLabelText("Tìm khu vực hoặc địa điểm")).toHaveValue(
+      "Đèn",
+    );
+    expect(screen.getByText("Đèn Test 03")).toBeInTheDocument();
+  });
+
+  it("copies a canonical share URL and reports the result", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Khu vực"), {
+      target: { value: "Quận 3" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Chia sẻ bộ lọc" }));
+
+    expect(await screen.findByText("Đã sao chép link")).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining("district=q3"),
+    );
+  });
+
+  it("shows deterministic reasons for the ranked result", () => {
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    expect(screen.getByText("Vì sao hợp")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Khả năng làm việc: rất thuận tiện · Mức ồn: rất yên tĩnh",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("filters the accessible place list by district", () => {
@@ -134,6 +238,133 @@ describe("ExploreExperience", () => {
     expect(within(results).getByText("Trạm Test 02")).toBeInTheDocument();
     expect(within(results).getByText("Đèn Test 03")).toBeInTheDocument();
     expect(within(results).queryByText("Góc Test 01")).not.toBeInTheDocument();
+  });
+
+  it("filters metadata and clears all metadata filters", () => {
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    fireEvent.click(screen.getByText("Bộ lọc quy mô, tiện ích và giá"));
+    fireEvent.click(screen.getByLabelText("Quy mô Nhỏ"));
+
+    expect(
+      screen.getByRole("region", { name: "1 Chốn để thử" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 đang áp dụng")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Xóa bộ lọc" }));
+    expect(
+      screen.getByRole("region", { name: "3 Chốn để thử" }),
+    ).toBeInTheDocument();
+  });
+
+  it("applies amenity filters with AND semantics and supports price levels", () => {
+    const { unmount } = render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    fireEvent.click(screen.getByText("Bộ lọc quy mô, tiện ích và giá"));
+    fireEvent.click(screen.getByLabelText("Tiện ích Wi-Fi"));
+    fireEvent.click(screen.getByLabelText("Tiện ích Điều hòa"));
+
+    const amenityResults = screen.getByRole("region", {
+      name: "1 Chốn để thử",
+    });
+    expect(
+      within(amenityResults).getByText("Trạm Test 02"),
+    ).toBeInTheDocument();
+    expect(
+      within(amenityResults).queryByText("Góc Test 01"),
+    ).not.toBeInTheDocument();
+    unmount();
+    window.history.replaceState(null, "", "/");
+
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+    fireEvent.click(screen.getByText("Bộ lọc quy mô, tiện ích và giá"));
+    fireEvent.click(screen.getByLabelText("Phân khúc giá 3 Khá"));
+    expect(
+      screen.getByRole("region", { name: "1 Chốn để thử" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Đèn Test 03")).toBeInTheDocument();
+  });
+
+  it("searches places and areas without hiding the accessible list", () => {
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Tìm khu vực hoặc địa điểm"), {
+      target: { value: "Quận 1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tìm" }));
+
+    const results = screen.getByRole("region", { name: "2 Chốn để thử" });
+    expect(within(results).getByText("Trạm Test 02")).toBeInTheDocument();
+    expect(within(results).getByText("Đèn Test 03")).toBeInTheDocument();
+    expect(within(results).queryByText("Góc Test 01")).not.toBeInTheDocument();
+    expect(screen.getByText("Khu vực tìm kiếm")).toBeInTheDocument();
+    expect(screen.getByText("· Đã cập nhật kết quả")).toBeInTheDocument();
+  });
+
+  it("derives the ranking time bucket from an exact date and time", () => {
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Ngày ghé"), {
+      target: { value: "2026-08-14" },
+    });
+    fireEvent.change(screen.getByLabelText("Giờ chính xác"), {
+      target: { value: "19:30" },
+    });
+    fireEvent.change(screen.getByLabelText("Thời lượng ngồi"), {
+      target: { value: "180" },
+    });
+
+    expect(
+      screen.getByText(/14\/08\/2026 · 19:30 · 3 giờ/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Tối · 19:30")).toBeInTheDocument();
+  });
+
+  it("queries a selected map point with the chosen radius", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({
+        data: [{ id: "test_place_002" }],
+        meta: { hasMore: false },
+      }),
+      ok: true,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <ExploreExperience
+        dataset={exploreTestDataset}
+        mapStyleUrl="https://example.test/style.json"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Bán kính tìm kiếm"), {
+      target: { value: "3000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Chọn trên bản đồ" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Chọn tâm trên bản đồ" }),
+    );
+
+    expect(
+      await screen.findByRole("region", { name: "1 Chốn để thử" }),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("lat=10.775000"),
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("radius=3000"),
+      expect.anything(),
+    );
   });
 
   it("supports keyboard focus and exposes selection without relying on color", () => {
