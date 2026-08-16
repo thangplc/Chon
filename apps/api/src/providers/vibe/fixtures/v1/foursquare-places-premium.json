@@ -1,0 +1,8 @@
+{
+  "amenities": ["outdoor_seating"],
+  "hours_popular": { "friday": [18, 19] },
+  "popularity": 0.8,
+  "price": 2,
+  "rating": 4.4,
+  "tastes": ["quiet"]
+}

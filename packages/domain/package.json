@@ -6,8 +6,10 @@
   "exports": {
     "./explore": "./src/explore/explore.ts",
     "./explore-contract": "./src/explore/explore-contract.ts",
+    "./purpose-preferences": "./src/explore/purpose-preferences.ts",
     "./place-detail": "./src/place-detail/place-detail.ts",
     "./spatial-query": "./src/places/spatial-query.ts",
+    "./vibe-fusion": "./src/vibe/vibe-fusion.ts",
     "./vibe-snapshot": "./src/vibe/vibe-snapshot.ts"
   },
   "devDependencies": {

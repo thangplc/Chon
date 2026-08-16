@@ -16,12 +16,14 @@ export class ExploreController {
   ) {}
 
   @ApiOkResponse({
-    description: "Simulated Explore dataset for non-production",
+    description: "Explore dataset for non-production environments",
   })
   @Get("simulated")
   async readSimulatedDataset() {
-    const dataset = await this.exploreService.getSimulatedDataset(
+    const dataset = await this.exploreService.getDataset(
       this.config.get("DATA_IMPORT_TARGET_ENVIRONMENT", { infer: true }),
+      this.config.get("EXPLORE_PLACE_DATA_MODE", { infer: true }),
+      this.config.get("EXPLORE_PLACE_METADATA_MODE", { infer: true }),
     );
 
     return { data: dataset };

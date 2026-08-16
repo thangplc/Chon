@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   aggregateVibeReports,
+  getConfidenceForReports,
   getDayTypeForDate,
   getTimeBucketForDate,
   getTimeBucketForLocalTime,
@@ -85,5 +86,103 @@ describe("vibe snapshot domain", () => {
       sourceDataTypes: ["community", "synthetic"],
       timeBucket: "morning",
     });
+  });
+
+  it("keeps missing dimensions null and groups by time context", () => {
+    const snapshots = aggregateVibeReports([
+      report({
+        scores: { crowd: 2, noise: 2 },
+      }),
+      report({
+        id: "report-2",
+        scores: { crowd: 4, noise: null },
+      }),
+      report({
+        id: "report-3",
+        dayType: "weekend",
+        timeBucket: "evening",
+        scores: { crowd: 5, workability: 3 },
+      }),
+    ]);
+
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[0]).toMatchObject({
+      dayType: "weekday",
+      reportCount: 2,
+      scores: {
+        crowd: 3,
+        lighting: null,
+        noise: 2,
+        privacy: null,
+        socialEnergy: null,
+        workability: null,
+      },
+      timeBucket: "morning",
+    });
+    expect(snapshots[1]).toMatchObject({
+      dayType: "weekend",
+      reportCount: 1,
+      timeBucket: "evening",
+    });
+  });
+
+  it("marks a group simulated only when every report is simulated", () => {
+    const snapshots = aggregateVibeReports([
+      report(),
+      report({ id: "report-2", dataType: "community", isSimulated: false }),
+    ]);
+
+    expect(snapshots[0]).toMatchObject({
+      isSimulated: false,
+      sourceDataTypes: ["community", "synthetic"],
+    });
+  });
+
+  it("returns low confidence for small samples", () => {
+    expect(getConfidenceForReports([])).toEqual({ level: "low", score: 0 });
+    expect(getConfidenceForReports([report()])).toEqual({
+      level: "low",
+      score: 0.39,
+    });
+    expect(
+      getConfidenceForReports([report(), report({ id: "report-2" })]),
+    ).toEqual({
+      level: "low",
+      score: 0.48,
+    });
+  });
+
+  it("requires agreement before marking a large sample high confidence", () => {
+    const agreeingReports = Array.from({ length: 8 }, (_, index) =>
+      report({ id: `agree-${index}` }),
+    );
+    const disagreeingReports = Array.from({ length: 8 }, (_, index) =>
+      report({
+        id: `disagree-${index}`,
+        scores: {
+          crowd: index % 2 === 0 ? 1 : 5,
+          lighting: index % 2 === 0 ? 1 : 5,
+          noise: index % 2 === 0 ? 1 : 5,
+          privacy: index % 2 === 0 ? 1 : 5,
+          socialEnergy: index % 2 === 0 ? 1 : 5,
+          workability: index % 2 === 0 ? 1 : 5,
+        },
+      }),
+    );
+
+    expect(getConfidenceForReports(agreeingReports)).toEqual({
+      level: "high",
+      score: 1,
+    });
+    expect(getConfidenceForReports(disagreeingReports)).toEqual({
+      level: "medium",
+      score: 0.7,
+    });
+  });
+
+  it("rejects invalid local clock values", () => {
+    expect(() => getTimeBucketForLocalTime(24, 0)).toThrow(RangeError);
+    expect(() => getTimeBucketForLocalTime(12, 60)).toThrow(RangeError);
+    expect(() => getTimeBucketForLocalTime(12.5, 0)).toThrow(RangeError);
   });
 });

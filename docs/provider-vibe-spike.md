@@ -32,6 +32,34 @@ lazy. Provider tắt không được khởi tạo; ingest bật nhưng thiếu c
 config fail ngay; adapter chưa được implement/đăng ký sẽ bị từ chối thay vì âm
 thầm bỏ qua.
 
+### Adapter và normalizer hiện tại
+
+Bốn adapter fixture-first đã được đăng ký trong provider registry:
+
+| Provider | Product | Storage mặc định | Normalized DB input hiện tại |
+|---|---|---|---|
+| Foursquare | `places_premium` | `reference_only` | Chỉ provenance và signal metadata |
+| Google | `places_api_new` | `reference_only` | Chỉ provenance và signal metadata |
+| Yelp | `places` | `ttl_cache` | Signal value được allowlist, hết hạn sau 24 giờ |
+| Tripadvisor | `content_api` | `reference_only` | Chỉ provenance và signal metadata |
+
+Normalizer dùng allowlist theo provider/product để loại field ngoài contract,
+từ chối raw payload và dimension mapping chưa được phép, bắt buộc
+`place_id`/`place_source_id`/`provider_place_id`, đồng thời tạo input tương
+thích với `provider_vibe_signals`. Các adapter không tự gọi mạng; command
+`pnpm provider:vibe:normalize --dry-run` chỉ chạy fixture để kiểm tra mapping
+và không ghi database.
+
+Response contract `v1` còn validate kiểu/range của các field candidate trước
+khi adapter đọc payload. Bộ fixture tại
+`apps/api/src/providers/vibe/fixtures/v1/` có manifest ghi rõ
+`isSynthetic: true`, không có endpoint và không có thời điểm capture. Vì vậy
+fixture hiện tại chỉ là test boundary, không phải bằng chứng response thật.
+
+Đây là implementation boundary, chưa phải production integration. HTTP client,
+retry/quota handling, place matching, live 30-place coverage và production flag
+vẫn phải chờ credential/commercial/partner approval và các gate bên dưới.
+
 ## Credential audit
 
 Tên biến credential server-side:
