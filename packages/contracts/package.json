@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./analytics": "./src/analytics.ts",
     "./backend": "./src/backend.ts"
   },
   "dependencies": {
