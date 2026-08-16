@@ -4,6 +4,9 @@ const localDefaults = {
   API_CORS_ORIGINS: "http://localhost:3000",
   API_HOST: "0.0.0.0",
   API_PORT: "3001",
+  EXPLORE_INCLUDE_REAL_PLACES: "false",
+  EXPLORE_PLACE_DATA_MODE: "synthetic",
+  EXPLORE_PLACE_METADATA_MODE: "synthetic",
 } as const;
 
 const environmentSchema = z
@@ -25,6 +28,11 @@ const environmentSchema = z
       "staging",
       "production",
     ]),
+    EXPLORE_INCLUDE_REAL_PLACES: z
+      .enum(["true", "false"])
+      .transform((value) => value === "true"),
+    EXPLORE_PLACE_DATA_MODE: z.enum(["synthetic", "mixed", "real"]),
+    EXPLORE_PLACE_METADATA_MODE: z.enum(["synthetic", "mixed", "real"]),
     NODE_ENV: z.enum(["development", "test", "production"]).optional(),
   })
   .passthrough();
@@ -35,12 +43,32 @@ export function validateApiEnvironment(
   input: Record<string, unknown>,
 ): ApiEnvironment {
   const nodeEnvironment = input.NODE_ENV ?? "development";
+  // Keep the old rollout flag working for existing .env files. New setups
+  // should use EXPLORE_PLACE_DATA_MODE explicitly.
+  const explorePlaceDataMode =
+    input.EXPLORE_PLACE_DATA_MODE ??
+    (input.EXPLORE_INCLUDE_REAL_PLACES === "true" ||
+    input.EXPLORE_INCLUDE_REAL_PLACES === true
+      ? "mixed"
+      : "synthetic");
   const withLocalDefaults =
     nodeEnvironment === "production"
-      ? input
-      : { ...localDefaults, ...input, NODE_ENV: nodeEnvironment };
+      ? { ...input, EXPLORE_PLACE_DATA_MODE: explorePlaceDataMode }
+      : {
+          ...localDefaults,
+          ...input,
+          EXPLORE_PLACE_DATA_MODE: explorePlaceDataMode,
+          NODE_ENV: nodeEnvironment,
+        };
 
-  return environmentSchema.parse(withLocalDefaults);
+  const environment = environmentSchema.parse(withLocalDefaults);
+  if (
+    environment.DATA_IMPORT_TARGET_ENVIRONMENT === "production" &&
+    environment.EXPLORE_PLACE_METADATA_MODE !== "real"
+  ) {
+    throw new Error("Production requires EXPLORE_PLACE_METADATA_MODE=real");
+  }
+  return environment;
 }
 
 export function parseCorsOrigins(value: string): string[] {

@@ -5,7 +5,11 @@ import { ImportError, type ImportIssue, type ImportFile } from "./types";
 import type { CsvRecord, ParsedCsv } from "./csv";
 
 const internalId = z.string().regex(/^[a-z0-9_]{3,64}$/);
-export const SUPPORTED_POI_PROVIDERS = ["fsq_os_places"] as const;
+export const SUPPORTED_POI_PROVIDERS = [
+  "fsq_os_places",
+  "openstreetmap",
+  "vietmap_maps",
+] as const;
 const requiredText = (maximum: number) => z.string().trim().min(1).max(maximum);
 const optionalText = (maximum: number) =>
   z.preprocess(

@@ -40,7 +40,11 @@ export type PlannedPlace = Readonly<{
 export type PlacePlan = Readonly<{
   create: readonly PlannedPlace[];
   existingIds: ReadonlyMap<string, string>;
-  update: readonly Readonly<{ id: string; input: PlaceInput }>[];
+  update: readonly Readonly<{
+    id: string;
+    input: PlaceInput;
+    updateProviderIdentity: boolean;
+  }>[];
 }>;
 
 function normalizeName(value: string): string {
@@ -57,6 +61,13 @@ function normalizeName(value: string): string {
 export function slugifyPlaceName(name: string, fallback: string): string {
   const slug = normalizeName(name).replaceAll(" ", "-");
   return slug || fallback.replaceAll("_", "-");
+}
+
+function disambiguateSlug(baseSlug: string, internalId: string): string {
+  const suffix = normalizeName(internalId).replaceAll(" ", "-");
+  const maxBaseLength = Math.max(1, 160 - suffix.length - 1);
+  const truncatedBase = baseSlug.slice(0, maxBaseLength).replace(/-+$/, "");
+  return `${truncatedBase || "place"}-${suffix}`;
 }
 
 function coordinatesAreEqual(left: number, right: number): boolean {
@@ -105,6 +116,22 @@ function immutablePlaceFieldsMatch(
     existing.slug === slug &&
     existing.address === input.address &&
     existing.district === input.district &&
+    coordinatesAreEqual(existing.latitude, input.latitude) &&
+    coordinatesAreEqual(existing.longitude, input.longitude) &&
+    existing.status === input.status &&
+    existing.isSimulated === input.is_simulated
+  );
+}
+
+function canUpdateProviderIdentity(
+  existing: ExistingPlace,
+  input: PlaceInput,
+  slug: string,
+): boolean {
+  return (
+    existing.internalId.startsWith("vietmap_") &&
+    existing.name === input.name &&
+    existing.slug === slug &&
     coordinatesAreEqual(existing.latitude, input.latitude) &&
     coordinatesAreEqual(existing.longitude, input.longitude) &&
     existing.status === input.status &&
@@ -289,56 +316,83 @@ export async function planPlaces(
     [...existing].map(([internalId, place]) => [internalId, place.id]),
   );
   const create: PlannedPlace[] = [];
-  const update: { id: string; input: PlaceInput }[] = [];
+  const update: {
+    id: string;
+    input: PlaceInput;
+    updateProviderIdentity: boolean;
+  }[] = [];
   const conflictingIds = new Set<string>();
   const slugOwners = new Map<string, string>();
 
   for (const row of rows) {
-    const slug = slugifyPlaceName(row.name, row.internal_id);
-    const existingSlugOwner = slugOwners.get(slug);
-
-    if (existingSlugOwner && existingSlugOwner !== row.internal_id) {
-      conflictingIds.add(existingSlugOwner);
-      conflictingIds.add(row.internal_id);
-      draft.issues.push({
-        code: "duplicate_slug",
-        message: `Places ${existingSlugOwner} and ${row.internal_id} generate the same slug '${slug}'`,
-        severity: "error",
-      });
-      continue;
-    }
+    const baseSlug = slugifyPlaceName(row.name, row.internal_id);
+    const slug =
+      slugOwners.has(baseSlug) && slugOwners.get(baseSlug) !== row.internal_id
+        ? disambiguateSlug(baseSlug, row.internal_id)
+        : baseSlug;
     slugOwners.set(slug, row.internal_id);
 
     const stored = existing.get(row.internal_id);
     if (stored) {
       if (!immutablePlaceFieldsMatch(stored, row, slug)) {
-        conflictingIds.add(row.internal_id);
-        draft.issues.push({
-          code: "immutable_id_conflict",
-          message: `Place ${row.internal_id} already exists with different identity content`,
-          severity: "error",
-        });
+        if (canUpdateProviderIdentity(stored, row, slug)) {
+          update.push({
+            id: stored.id,
+            input: row,
+            updateProviderIdentity: true,
+          });
+          draft.entities.places.updated += 1;
+        } else {
+          conflictingIds.add(row.internal_id);
+          draft.issues.push({
+            code: "immutable_id_conflict",
+            message: `Place ${row.internal_id} already exists with different identity content`,
+            severity: "error",
+          });
+        }
       } else if (mutablePlaceFieldsMatch(stored, row)) {
         draft.entities.places.unchanged += 1;
       } else {
-        update.push({ id: stored.id, input: row });
+        update.push({
+          id: stored.id,
+          input: row,
+          updateProviderIdentity: false,
+        });
         draft.entities.places.updated += 1;
       }
       continue;
     }
 
+    let resolvedSlug = slug;
     const slugResult = await client.query<{ internal_id: string }>(
       "SELECT internal_id FROM places WHERE slug = $1 LIMIT 1",
-      [slug],
+      [resolvedSlug],
     );
     if (slugResult.rowCount) {
-      conflictingIds.add(row.internal_id);
-      draft.issues.push({
-        code: "slug_conflict",
-        message: `Slug '${slug}' belongs to ${slugResult.rows[0].internal_id}`,
-        severity: "error",
-      });
-      continue;
+      const storedSlugOwner = slugResult.rows[0].internal_id;
+      if (storedSlugOwner !== row.internal_id) {
+        const fallbackSlug = disambiguateSlug(baseSlug, row.internal_id);
+        const fallbackResult = await client.query<{ internal_id: string }>(
+          "SELECT internal_id FROM places WHERE slug = $1 LIMIT 1",
+          [fallbackSlug],
+        );
+        const fallbackOwner = slugOwners.get(fallbackSlug);
+        if (
+          fallbackResult.rowCount ||
+          (fallbackOwner !== undefined && fallbackOwner !== row.internal_id)
+        ) {
+          conflictingIds.add(row.internal_id);
+          draft.issues.push({
+            code: "slug_conflict",
+            message: `Slug '${resolvedSlug}' belongs to ${storedSlugOwner}; fallback '${fallbackSlug}' is also occupied`,
+            severity: "error",
+          });
+          continue;
+        }
+        slugOwners.delete(resolvedSlug);
+        slugOwners.set(fallbackSlug, row.internal_id);
+        resolvedSlug = fallbackSlug;
+      }
     }
 
     const nearby = await findNearbySameName(client, row);
@@ -360,7 +414,7 @@ export async function planPlaces(
         severity: "warning",
       });
     }
-    create.push({ input: row, serviceAreas, slug });
+    create.push({ input: row, serviceAreas, slug: resolvedSlug });
   }
 
   for (let leftIndex = 0; leftIndex < create.length; leftIndex += 1) {
@@ -420,6 +474,13 @@ export async function insertPlannedPlaces(
       updateFields.push(`${column} = $${values.length + 1}`);
       values.push(value);
     };
+
+    if (place.updateProviderIdentity) {
+      updateFields.push(`address = $${values.length + 1}`);
+      values.push(input.address);
+      updateFields.push(`district = $${values.length + 1}`);
+      values.push(input.district);
+    }
 
     setField("price_level", "price_level", input.price_level ?? null);
     setField(

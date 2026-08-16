@@ -1,0 +1,66 @@
+[
+  {
+    "address": "12 Đường Nguyễn Đình Chiểu, Phường Võ Thị Sáu, Thành Phố Hồ Chí Minh",
+    "boundaries": [
+      {
+        "type": 2,
+        "id": 1001,
+        "name": "Võ Thị Sáu",
+        "prefix": "Phường",
+        "full_name": "Phường Võ Thị Sáu"
+      },
+      {
+        "type": 0,
+        "id": 12,
+        "name": "Hồ Chí Minh",
+        "prefix": "Thành Phố",
+        "full_name": "Thành Phố Hồ Chí Minh"
+      }
+    ],
+    "categories": ["1001-1"],
+    "data_new": {
+      "display": "12 Đường Nguyễn Đình Chiểu, Phường Võ Thị Sáu, Thành Phố Hồ Chí Minh",
+      "address": "12 Đường Nguyễn Đình Chiểu, Phường Võ Thị Sáu, Thành Phố Hồ Chí Minh"
+    },
+    "data_old": {
+      "display": "12 Đường Nguyễn Đình Chiểu, Phường 6, Quận 3, Thành Phố Hồ Chí Minh",
+      "address": "12 Đường Nguyễn Đình Chiểu, Phường 6, Quận 3, Thành Phố Hồ Chí Minh"
+    },
+    "display": "Fixture Cafe 01, 12 Đường Nguyễn Đình Chiểu, Phường Võ Thị Sáu, Thành Phố Hồ Chí Minh",
+    "distance": 0.18,
+    "entry_points": [],
+    "lat": 10.7842,
+    "lng": 106.6936,
+    "name": "Fixture Cafe 01",
+    "ref_id": "fixture:POI:cafe-01"
+  },
+  {
+    "address": "88 Đường Điện Biên Phủ, Phường 17, Thành Phố Hồ Chí Minh",
+    "boundaries": [
+      {
+        "type": 2,
+        "id": 1002,
+        "name": "17",
+        "prefix": "Phường",
+        "full_name": "Phường 17"
+      },
+      {
+        "type": 0,
+        "id": 12,
+        "name": "Hồ Chí Minh",
+        "prefix": "Thành Phố",
+        "full_name": "Thành Phố Hồ Chí Minh"
+      }
+    ],
+    "categories": ["1001-1"],
+    "data_new": null,
+    "data_old": null,
+    "display": "Fixture Cafe 02, 88 Đường Điện Biên Phủ, Phường 17, Thành Phố Hồ Chí Minh",
+    "distance": 0.42,
+    "entry_points": [],
+    "lat": 10.8011,
+    "lng": 106.7132,
+    "name": "Fixture Cafe 02",
+    "ref_id": "fixture:POI:cafe-02"
+  }
+]

@@ -59,6 +59,24 @@ Foursquare Places Pro/Premium | Google Places | Yelp | Tripadvisor
 - Sync của từng provider độc lập. Một provider lỗi, hết quota hoặc bị tắt không được chặn contribution flow của Chốn.
 - Trước khi bật production phải có credential smoke test, mẫu coverage tại TP.HCM, chi phí dự kiến và review attribution/terms.
 
+Adapter/normalizer hiện đã được scaffold cho cả bốn provider theo cùng một
+boundary:
+
+```text
+provider payload
+  → adapter chọn field được hỗ trợ
+  → provider/product allowlist kiểm tra signal và storage policy
+  → normalize provenance + thời điểm + confidence
+  → toProviderVibeSignalInsert()
+  → provider_vibe_signals (khi sync job được bật)
+```
+
+Các adapter hiện là fixture-first và không tự gọi mạng. Foursquare, Google và
+Tripadvisor mặc định `reference_only`; Yelp mặc định `ttl_cache` 24 giờ. Không
+provider nào được tự động ghi raw payload hoặc map thành sáu chiều vibe. Live
+transport, place matching và coverage report là gate kế tiếp, không được giả
+lập bằng cách bật production flag.
+
 ### Dữ liệu do Chốn thu thập
 
 ```text

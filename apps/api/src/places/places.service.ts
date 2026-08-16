@@ -17,7 +17,16 @@ import {
   executeSpatialPlaceQuery,
   type SpatialPlacePage,
 } from "../database/queries/spatial-place-query";
-import { placeAreas, placeMedia, places } from "../database/schema";
+import {
+  placeAreas,
+  placeMedia,
+  placeMetadataOverlays,
+  places,
+} from "../database/schema";
+import {
+  resolvePlaceMetadata,
+  type SyntheticPlaceMetadata,
+} from "./place-metadata-resolver";
 
 const simulatedEnvironments = new Set(["local", "ci", "staging"]);
 
@@ -35,6 +44,7 @@ export class PlacesService {
   async findDetailBySlug(
     slug: string,
     environment: ApiEnvironment["DATA_IMPORT_TARGET_ENVIRONMENT"],
+    metadataMode: ApiEnvironment["EXPLORE_PLACE_METADATA_MODE"] = "real",
   ): Promise<PlaceDetail | null> {
     const [place] = await this.db
       .select({
@@ -64,6 +74,55 @@ export class PlacesService {
     ) {
       return null;
     }
+
+    let syntheticMetadata: SyntheticPlaceMetadata | null = null;
+    if (metadataMode !== "real" && !place.isSimulated) {
+      const [overlay] = await this.db
+        .select({
+          amenities: placeMetadataOverlays.amenities,
+          currency: placeMetadataOverlays.currency,
+          estimatedCapacity: placeMetadataOverlays.estimatedCapacity,
+          openingHours: placeMetadataOverlays.openingHours,
+          priceLevel: placeMetadataOverlays.priceLevel,
+          sizeCategory: placeMetadataOverlays.sizeCategory,
+          spaceNote: placeMetadataOverlays.spaceNote,
+          typicalSpendMax: placeMetadataOverlays.typicalSpendMax,
+          typicalSpendMin: placeMetadataOverlays.typicalSpendMin,
+        })
+        .from(placeMetadataOverlays)
+        .where(
+          and(
+            eq(placeMetadataOverlays.placeId, place.id),
+            eq(placeMetadataOverlays.environment, environment),
+          ),
+        )
+        .limit(1);
+      syntheticMetadata = overlay
+        ? {
+            ...overlay,
+            openingHours: overlay.openingHours
+              ? parsePlaceOpeningHours(overlay.openingHours)
+              : null,
+            priceLevel: parsePriceLevel(overlay.priceLevel),
+          }
+        : null;
+    }
+
+    const metadata = resolvePlaceMetadata(
+      {
+        currency: place.currency,
+        estimatedCapacity: place.estimatedCapacity,
+        openingHours: place.openingHours
+          ? parsePlaceOpeningHours(place.openingHours)
+          : null,
+        priceLevel: parsePriceLevel(place.priceLevel),
+        sizeCategory: place.sizeCategory,
+        typicalSpendMax: place.typicalSpendMax,
+        typicalSpendMin: place.typicalSpendMin,
+      },
+      syntheticMetadata,
+      metadataMode,
+    );
 
     const areaRows = await this.db
       .select({
@@ -110,10 +169,11 @@ export class PlacesService {
     return {
       address: place.address,
       areas: areaRows,
-      currency: place.currency,
+      amenities: metadata.amenities,
+      currency: metadata.currency,
       description: place.description,
       district: place.district,
-      estimatedCapacity: place.estimatedCapacity,
+      estimatedCapacity: metadata.estimatedCapacity,
       id: place.id,
       isSimulated: place.isSimulated,
       latitude: place.location.latitude,
@@ -130,14 +190,14 @@ export class PlacesService {
         width: media.width,
       })),
       name: place.name,
-      openingHours: place.openingHours
-        ? parsePlaceOpeningHours(place.openingHours)
-        : null,
-      priceLevel: parsePriceLevel(place.priceLevel),
-      sizeCategory: place.sizeCategory,
+      metadata: metadata.metadata,
+      openingHours: metadata.openingHours,
+      priceLevel: metadata.priceLevel,
+      sizeCategory: metadata.sizeCategory,
       slug: place.slug,
-      typicalSpendMax: place.typicalSpendMax,
-      typicalSpendMin: place.typicalSpendMin,
+      spaceNote: metadata.spaceNote,
+      typicalSpendMax: metadata.typicalSpendMax,
+      typicalSpendMin: metadata.typicalSpendMin,
     };
   }
 }
