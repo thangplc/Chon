@@ -4,6 +4,9 @@ const localDefaults = {
   API_CORS_ORIGINS: "http://localhost:3000",
   API_HOST: "0.0.0.0",
   API_PORT: "3001",
+  AUTH_API_AUDIENCE: "chon-api",
+  AUTH_API_ISSUER: "chon-web",
+  AUTH_API_SECRET: "dev-only-change-this-auth-api-secret-32chars",
   EXPLORE_INCLUDE_REAL_PLACES: "false",
   EXPLORE_PLACE_DATA_MODE: "synthetic",
   EXPLORE_PLACE_METADATA_MODE: "synthetic",
@@ -14,6 +17,9 @@ const environmentSchema = z
     API_CORS_ORIGINS: z.string().min(1),
     API_HOST: z.string().min(1),
     API_PORT: z.coerce.number().int().min(1).max(65_535),
+    AUTH_API_AUDIENCE: z.string().min(1).max(120),
+    AUTH_API_ISSUER: z.string().min(1).max(120),
+    AUTH_API_SECRET: z.string().min(32),
     DATABASE_HOST: z.string().min(1),
     DATABASE_NAME: z.string().min(1),
     DATABASE_PASSWORD: z.string().min(1),
@@ -67,6 +73,12 @@ export function validateApiEnvironment(
     environment.EXPLORE_PLACE_METADATA_MODE !== "real"
   ) {
     throw new Error("Production requires EXPLORE_PLACE_METADATA_MODE=real");
+  }
+  if (
+    nodeEnvironment === "production" &&
+    environment.AUTH_API_SECRET.includes("dev-only")
+  ) {
+    throw new Error("Production requires a non-default AUTH_API_SECRET");
   }
   return environment;
 }

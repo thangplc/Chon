@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./analytics": "./src/analytics.ts",
+    "./auth": "./src/auth.ts",
     "./backend": "./src/backend.ts"
   },
   "dependencies": {

@@ -5,6 +5,7 @@ import { ConfigModule } from "@nestjs/config";
 
 import { validateApiEnvironment } from "./config/api-environment";
 import { AnalyticsModule } from "./analytics/analytics.module";
+import { AuthModule } from "./auth/auth.module";
 import { ExploreModule } from "./explore/explore.module";
 import { HealthModule } from "./health/health.module";
 import { PlacesModule } from "./places/places.module";
@@ -19,6 +20,7 @@ const apiEnvironmentPath = path.resolve(process.cwd(), ".env");
       validate: validateApiEnvironment,
     }),
     AnalyticsModule,
+    AuthModule,
     ExploreModule,
     HealthModule,
     PlacesModule,

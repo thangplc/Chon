@@ -9,5 +9,6 @@ export * from "./place-sources";
 export * from "./provider-vibe-signals";
 export * from "./postgis";
 export * from "./service-areas";
+export * from "./users";
 export * from "./vibe-reports";
 export * from "./vibe-snapshots";

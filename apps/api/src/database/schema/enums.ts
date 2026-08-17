@@ -92,6 +92,12 @@ export const vibeConfidenceLevelEnum = pgEnum("vibe_confidence_level", [
   "high",
 ]);
 
+export const userStatusEnum = pgEnum("user_status", [
+  "active",
+  "suspended",
+  "deleted",
+]);
+
 export const visitModeEnum = pgEnum("visit_mode", [
   "work",
   "study",
