@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import { AuthControls } from "@/features/auth/components/auth-controls";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,6 +25,7 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
   return (
     <html lang="vi">
       <body>
+        <AuthControls />
         {children}
         {modal}
       </body>
