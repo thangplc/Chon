@@ -32,6 +32,9 @@ DATABASE_HOST=127.0.0.1
 DATABASE_PORT=5432
 API_PORT=3001
 API_CORS_ORIGINS=http://localhost:3000
+AUTH_API_SECRET=dev-only-change-this-auth-api-secret-32chars
+AUTH_API_ISSUER=chon-web
+AUTH_API_AUDIENCE=chon-api
 DATA_IMPORT_TARGET_ENVIRONMENT=local
 EXPLORE_PLACE_DATA_MODE=synthetic
 ```
@@ -110,6 +113,7 @@ volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:d
 ## Endpoints
 
 - `GET /v1/health`
+- `GET /v1/auth/me` (requires a signed server assertion)
 - `GET /v1/places?bbox=west,south,east,north&limit=50`
 - `GET /v1/places?lat=10.775&lng=106.700&radius=1500&limit=50`
 - `GET /v1/places/:slug`

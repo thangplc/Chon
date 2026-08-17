@@ -121,7 +121,7 @@ Người dùng nhận danh sách xếp hạng khác nhau cho làm việc, đi m�
 
 ## Sprint 5 — Contribution
 
-- [ ] Authentication.
+- [x] Authentication và identity foundation — Google OAuth/Auth.js JWT session, `users`/`user_identities`, signed web-to-API assertion, `/v1/auth/me` và public Explore boundary.
 - [ ] Luồng vibe report 3 bước, mobile-first.
 - [ ] Xác minh gần địa điểm theo lựa chọn của người dùng.
 - [ ] Chống spam và rate limit cơ bản.

@@ -29,6 +29,7 @@ Tài liệu chi tiết hỗ trợ:
 - [Provider vibe terms/credential/coverage spike](docs/provider-vibe-spike.md)
 - [Vibe taxonomy](docs/vibe-taxonomy.md)
 - [Vibe data policy](docs/vibe-data-policy.md)
+- [Authentication](docs/authentication.md)
 - [Purpose profiles](docs/purpose-profiles.md)
 - [Prototype specification](docs/prototype-spec.md)
 - [Data contract](docs/data-contract.md)
@@ -163,6 +164,10 @@ Chi tiết contract và giới hạn tại [Spatial place query](docs/spatial-pl
 Explore lưu bộ lọc vào URL canonical để chia sẻ và gửi analytics context đã
 ẩn danh. Chi tiết tham số, privacy boundary và endpoint tại
 [Explore sharing và analytics](docs/explore-sharing-analytics.md).
+
+Explore và Place Detail vẫn public. Đóng góp community đầy đủ yêu cầu đăng
+nhập Google OAuth; cấu hình Auth.js và assertion server-to-server tại
+[Authentication](docs/authentication.md).
 
 Xem quy trình migration và nguyên tắc an toàn tại [Database runbook](docs/database.md).
 
