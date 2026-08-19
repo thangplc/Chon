@@ -71,7 +71,7 @@ function formatSpend(place: PlaceDetail): string | null {
 }
 
 const cardClassName =
-  "rounded-[1.25rem] border border-[#173f33]/10 bg-[#f8f3e8] p-4";
+  "min-w-0 rounded-2xl border border-[#c96040]/15 bg-[#fffdf9] p-4";
 const emptyClassName = "mt-2 text-sm leading-6 text-[#6b7d74]";
 
 export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
@@ -84,9 +84,9 @@ export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
   return (
     <section
       aria-labelledby="place-facts-title"
-      className="rounded-[1.5rem] border border-[#173f33]/10 bg-white/75 p-5 shadow-sm"
+      className="rounded-3xl border border-[#c96040]/15 bg-[#fffdf9]/85 p-4 shadow-sm sm:p-5"
     >
-      <h2 id="place-facts-title" className="text-lg font-bold">
+      <h2 id="place-facts-title" className="text-xl font-extrabold">
         Thông tin địa điểm
       </h2>
       {place.metadata.isSimulated && (
@@ -94,7 +94,7 @@ export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
           {place.metadata.label}
         </p>
       )}
-      <div className="mt-4 grid gap-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-3 md:items-start">
         <section
           aria-labelledby="opening-hours-title"
           className={cardClassName}
@@ -113,15 +113,15 @@ export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
               <p className="mt-2 text-xs text-[#6b7d74]">
                 Lịch thường lệ · múi giờ TP.HCM
               </p>
-              <details className="mt-3 border-t border-[#173f33]/10 pt-3">
-                <summary className="cursor-pointer text-sm font-semibold text-[#245c4c] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c59635]">
+              <details className="mt-3 border-t border-[#c96040]/15 pt-3">
+                <summary className="cursor-pointer text-sm font-semibold text-[#963f2a] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c96040]">
                   Xem lịch cả tuần
                 </summary>
                 <dl className="mt-3 space-y-2 text-sm">
                   {WEEKDAYS.map((weekday) => (
                     <div
                       className={`flex justify-between gap-4 rounded-lg px-2 py-1 ${
-                        weekday === today ? "bg-[#e9eddc]" : ""
+                        weekday === today ? "bg-[#f5ddd3]" : ""
                       }`}
                       key={weekday}
                     >
@@ -182,7 +182,7 @@ export function PlaceFacts({ place }: Readonly<{ place: PlaceDetail }>) {
                 <ul className="space-y-2" aria-label="Các khu vực trong quán">
                   {place.areas.map((area) => (
                     <li
-                      className="rounded-xl border border-[#173f33]/10 bg-white/70 px-3 py-2"
+                      className="rounded-xl border border-[#c96040]/10 bg-white/75 px-3 py-2"
                       key={area.id}
                     >
                       <p className="font-semibold">{area.name}</p>

@@ -141,7 +141,11 @@ Place Detail dùng canonical URL và chỉ trả địa điểm `published`:
 GET /places/goc-may-01
 ```
 
-Khi điều hướng từ Explore trên tablet/desktop, App Router intercept URL này thành drawer. Truy cập trực tiếp hoặc refresh vẫn render full page. Gallery chỉ lấy tối đa 5 media `approved` có rights hợp lệ; fixture SVG luôn được gắn nhãn simulated và provenance.
+Explore luôn điều hướng URL này thành full page trên mọi kích thước màn hình.
+Selection card trên Explore vẫn cho phép mở modal `Góp vibe` nhanh; trang chi tiết
+cũng dùng cùng modal và giữ context qua Google OAuth bằng query `contribute=1`
+và `place=<slug>`. Gallery chỉ lấy tối đa 5 media `approved` có rights hợp lệ;
+fixture SVG luôn được gắn nhãn simulated và provenance.
 
 Spatial place API:
 

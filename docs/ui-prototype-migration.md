@@ -5,8 +5,8 @@
 Chốn giữ Next.js + React + Tailwind CSS v4 làm nền styling và dùng shadcn/ui
 theo mô hình code-owned components cho các primitive dùng chung. Chốn không
 đưa MUI, Ant Design hoặc Chakra UI vào Explore vì các bộ thư viện này mang
-theo layout/theme opinionated, khó khớp với bản đồ và detail drawer riêng của
-prototype.
+theo layout/theme opinionated, khó khớp với bản đồ và detail page riêng của
+Chốn.
 
 Native semantic elements (`input`, `select`, `details`, `button`) vẫn được giữ
 ở các control phù hợp. UI primitive chỉ gom các phần cần dùng lại như Button,
@@ -17,17 +17,32 @@ cần thiết cho form control.
 
 - Header/search và purpose quick bar theo `prototype/wide-app.js`.
 - Desktop từ `1180px`: filter sidebar, result list và map thành ba cột.
-- Tablet: list/map split view; filter mở dạng drawer từ trái.
-- Mobile: map đứng trước, danh sách nằm dạng sheet phía dưới; filter nằm trong
-  luồng Explore và có thể mở/ẩn.
+- Tablet và mobile dưới `1180px`: map đứng trước, bộ lọc nằm trên danh sách
+  “Chốn phù hợp”, sau đó là danh sách accessible cuộn tự nhiên.
+- Bộ lọc vẫn có thể thu gọn trên mobile; tablet hiển thị bộ lọc inline để không
+  che danh sách bằng drawer.
 - Result card có thumbnail synthetic, score, reason, confidence/report và link
   chi tiết.
-- Desktop/tablet giữ header của danh sách trong vùng cuộn riêng để nhiều kết
-  quả không làm trôi bản đồ; mobile dùng cuộn trang tự nhiên.
-- Khi chọn card hoặc marker, bản đồ pan tới địa điểm và hiển thị selected-place
-  card ở góc phải phía dưới với thao tác mở chi tiết hoặc góp vibe.
-- Font dùng system sans cho nội dung và system serif cho tên/tiêu đề, cỡ chữ
-  card được tăng để đọc tốt hơn trên màn hình nhỏ.
+- Desktop giữ header của danh sách trong vùng cuộn riêng để nhiều kết quả không
+  làm trôi bản đồ; tablet/mobile dùng cuộn trang tự nhiên.
+- Khi chọn card hoặc marker, bản đồ pan tới địa điểm. Desktop hiển thị
+  selected-place card ở góc phải phía dưới; tablet/mobile ẩn card nổi và đưa
+  `Xem chi tiết` cùng `Góp vibe` vào card đang chọn trong danh sách.
+- `Mở chi tiết` điều hướng tới canonical full page; `Góp vibe` mở một modal
+  fixed ở ngoài map/list để không bị clipping bởi card hoặc scroll container.
+- Selection card desktop mở bằng slide-up/fade `220ms`, đóng bằng slide-down/fade
+  `160ms`; người dùng bật reduced motion sẽ không chạy animation.
+- Place Detail dùng cùng modal và bảng màu cream/orange của Explore. Font dùng
+  một system sans có fallback hỗ trợ đầy đủ tiếng Việt và tiếng Anh.
+- Place Detail mobile theo cấu trúc prototype: compact header, gallery, tên và
+  trạng thái mở cửa, confidence, lý do phù hợp, vibe bars rồi mới tới facts.
+  Tablet/desktop chuyển thành hai cột nhưng giữ nguyên thứ tự đọc semantic.
+- Explore giữ `purpose`, ngày và giờ trong link chi tiết để match score và lý do
+  được tính từ canonical snapshot đúng context; deep link dùng intent mặc định
+  đã chuẩn hóa.
+- `Góp vibe` và `Chỉ đường` nằm trong action bar sticky có safe-area trên mobile,
+  trở lại flow bình thường trên desktop. Provider bản đồ không xuất hiện trong
+  tên CTA.
 - Dữ liệu, ranking, URL state, analytics, spatial query và fallback accessible
   vẫn dùng code production hiện tại.
 

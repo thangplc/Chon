@@ -69,23 +69,21 @@ export function PlaceDetailMap({
     }
   }, [latitude, longitude, mapStyleUrl, name]);
 
-  const osmUrl = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=18/${latitude}/${longitude}`;
-
   return (
     <section
       aria-label={`Vị trí của ${name}`}
-      className="relative min-h-64 overflow-hidden rounded-[1.5rem] border border-[#173f33]/10 bg-[#d9ddc7]"
+      className="relative min-h-64 overflow-hidden rounded-[1.5rem] border border-[#c96040]/15 bg-[#eee6da]"
     >
       {mapStyleUrl ? (
         <div className="absolute inset-0" ref={containerRef} />
       ) : (
-        <div className="absolute inset-0 grid place-items-center p-6 text-center text-sm text-[#42645a]">
+        <div className="absolute inset-0 grid place-items-center p-6 text-center text-sm text-[#426b57]">
           Bản đồ chưa được cấu hình. Tọa độ địa điểm vẫn có thể mở bằng
           OpenStreetMap.
         </div>
       )}
       {mapStyleUrl && status === "loading" && (
-        <div className="absolute inset-0 grid place-items-center bg-[#d9ddc7] text-sm font-semibold text-[#42645a]">
+        <div className="absolute inset-0 grid place-items-center bg-[#eee6da] text-sm font-semibold text-[#426b57]">
           Đang tải vị trí…
         </div>
       )}
@@ -94,14 +92,6 @@ export function PlaceDetailMap({
           Không thể tải bản đồ. Bạn vẫn có thể mở tọa độ trên OpenStreetMap.
         </div>
       )}
-      <a
-        className="absolute right-3 bottom-3 rounded-xl bg-white/95 px-3 py-2 text-xs font-bold text-[#315d50] shadow-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c59635]"
-        href={osmUrl}
-        rel="noreferrer"
-        target="_blank"
-      >
-        Mở trên OpenStreetMap
-      </a>
     </section>
   );
 }

@@ -1,35 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-
-type PlaceDetailBackControlProps = Readonly<{
-  presentation: "page" | "drawer";
-}>;
-
-const className =
-  "inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-bold text-[#315d50] transition-colors hover:bg-white/70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c59635]";
-
-function DrawerBackButton() {
-  const router = useRouter();
-
-  return (
-    <button className={className} onClick={() => router.back()} type="button">
-      <span aria-hidden="true">←</span>
-      Trở về Explore
-    </button>
-  );
-}
 
 export function PlaceDetailBackControl({
-  presentation,
-}: PlaceDetailBackControlProps) {
-  if (presentation === "drawer") return <DrawerBackButton />;
-
+  compact = false,
+  href = "/",
+}: Readonly<{ compact?: boolean; href?: string }>) {
   return (
-    <Link className={className} href="/">
+    <Link
+      aria-label={compact ? "Trở về Explore" : undefined}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#ddd2c3] bg-[#fffdf9] px-3 text-sm font-bold text-[#28231f] transition-colors hover:border-[#c96040] hover:text-[#963f2a] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] ${compact ? "size-10 p-0 text-xl" : ""}`}
+      href={href}
+    >
       <span aria-hidden="true">←</span>
-      Trở về Explore
+      {!compact && "Trở về Explore"}
     </Link>
   );
 }
