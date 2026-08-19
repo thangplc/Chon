@@ -92,3 +92,7 @@ Auth.js Google OAuth dùng các route `/api/auth/*`. `AUTH_API_SECRET` là secre
 server-only phải trùng với API để proxy `/api/auth/me` tạo assertion ngắn hạn;
 không dùng prefix `NEXT_PUBLIC_` cho secret này. Xem callback URL và security
 boundary tại [Authentication](../../docs/authentication.md).
+
+Place Detail có flow `Góp vibe` ba bước cho user đã đăng nhập; report đi qua
+same-origin proxy `/api/places/:slug/vibe-reports` và chờ moderation trước khi
+ảnh hưởng đến snapshot.

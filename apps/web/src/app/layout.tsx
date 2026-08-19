@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/500.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/be-vietnam-pro/700.css";
+import "@fontsource/be-vietnam-pro/800.css";
 import "maplibre-gl/dist/maplibre-gl.css";
-
-import { AuthControls } from "@/features/auth/components/auth-controls";
 
 import "./globals.css";
 
@@ -25,7 +28,6 @@ export default function RootLayout({ children, modal }: RootLayoutProps) {
   return (
     <html lang="vi">
       <body>
-        <AuthControls />
         {children}
         {modal}
       </body>

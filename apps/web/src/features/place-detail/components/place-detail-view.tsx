@@ -5,6 +5,7 @@ import { PlaceFacts } from "./place-facts";
 import { PlaceGallery } from "./place-gallery";
 import { PlaceVibeSummary } from "./place-vibe-summary";
 import type { VibeSnapshotApiItem } from "@chon/contracts/backend";
+import { VibeReportFlow } from "@/features/contribution/components/vibe-report-flow";
 
 type PlaceDetailViewProps = Readonly<{
   mapStyleUrl: string | null;
@@ -73,6 +74,7 @@ export function PlaceDetailView({
               <span aria-hidden="true">↗</span>
             </a>
           )}
+          <VibeReportFlow placeName={place.name} placeSlug={place.slug} />
         </header>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">

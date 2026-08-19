@@ -30,6 +30,7 @@ Tài liệu chi tiết hỗ trợ:
 - [Vibe taxonomy](docs/vibe-taxonomy.md)
 - [Vibe data policy](docs/vibe-data-policy.md)
 - [Authentication](docs/authentication.md)
+- [Community contribution](docs/contribution.md)
 - [Purpose profiles](docs/purpose-profiles.md)
 - [Prototype specification](docs/prototype-spec.md)
 - [Data contract](docs/data-contract.md)

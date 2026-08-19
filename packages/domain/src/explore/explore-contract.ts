@@ -1,13 +1,13 @@
 // Shared Explore contract; UI labels remain part of the product taxonomy.
 export const purposes = [
-  { id: "work", label: "Làm việc" },
-  { id: "study", label: "Học/đọc" },
-  { id: "solo", label: "Đi một mình" },
-  { id: "date", label: "Hẹn hò" },
-  { id: "friends", label: "Gặp bạn" },
-  { id: "business_meeting", label: "Họp việc" },
-  { id: "relax", label: "Thư giãn" },
-  { id: "late_night", label: "Đi khuya" },
+  { id: "work", label: "Làm việc", icon: "💼" },
+  { id: "study", label: "Học/đọc", icon: "📚" },
+  { id: "solo", label: "Đi một mình", icon: "🚶" },
+  { id: "date", label: "Hẹn hò", icon: "♡" },
+  { id: "friends", label: "Gặp bạn", icon: "👥" },
+  { id: "business_meeting", label: "Họp việc", icon: "🤝" },
+  { id: "relax", label: "Thư giãn", icon: "☕" },
+  { id: "late_night", label: "Đi khuya", icon: "🌙" },
 ] as const;
 
 export const exploreDistricts = ["Quận 1", "Quận 3", "Bình Thạnh"] as const;

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 
 import { getPublicMapConfiguration } from "@/config/map";
+import { AuthControls } from "@/features/auth/components/auth-controls";
 import { ExploreExperience } from "@/features/explore/components/explore-experience";
 import { getExploreDataset } from "@/features/explore/data/explore-repository";
 
@@ -12,6 +13,7 @@ async function ExploreFromDatabase() {
 
   return (
     <ExploreExperience
+      authControls={<AuthControls />}
       dataset={dataset}
       mapStyleUrl={mapConfiguration.styleUrl}
     />

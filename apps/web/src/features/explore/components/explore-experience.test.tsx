@@ -143,7 +143,7 @@ describe("ExploreExperience", () => {
     const results = screen.getByRole("region", { name: "3 Chốn để thử" });
     expect(results).toHaveAttribute("id", "explore-results");
     expect(results).not.toHaveClass("-mt-10");
-    expect(results).toHaveClass("rounded-[2rem]");
+    expect(results).toHaveClass("rounded-xl");
     expect(
       screen.getByRole("region", { name: "3 Chốn để thử" }),
     ).toHaveAttribute("tabindex", "-1");
@@ -151,12 +151,12 @@ describe("ExploreExperience", () => {
       screen.getByRole("list", { name: "Danh sách địa điểm phù hợp" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Xem chi tiết Góc Test 01" }),
-    ).toHaveAttribute("href", "/places/goc-test-01");
+      screen.queryByRole("link", { name: "Xem chi tiết Góc Test 01" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Bản đồ chưa được cấu hình")).toBeInTheDocument();
     expect(
       screen.getByRole("complementary", { name: "Nguồn dữ liệu" }),
-    ).toHaveClass("lg:absolute");
+    ).toHaveClass("chon-map-source-label");
     expect(
       screen.getByRole("region", { name: "Bản đồ các địa điểm" }).parentElement,
     ).toHaveClass("self-start", "lg:sticky", "lg:top-4");
@@ -381,6 +381,23 @@ describe("ExploreExperience", () => {
     expect(firstPlace).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Đang chọn")).toBeInTheDocument();
     expect(screen.getByText("Góc Test 01 đang được chọn.")).toBeInTheDocument();
+
+    const selectedPlaceCard = screen.getByRole("complementary", {
+      name: "Địa điểm đang chọn: Góc Test 01",
+    });
+    expect(
+      within(selectedPlaceCard).getByRole("link", { name: "Mở chi tiết" }),
+    ).toHaveAttribute("href", "/places/goc-test-01");
+    fireEvent.click(
+      within(selectedPlaceCard).getByRole("button", {
+        name: "Bỏ chọn Góc Test 01",
+      }),
+    );
+    expect(
+      screen.queryByRole("complementary", {
+        name: "Địa điểm đang chọn: Góc Test 01",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows an honest no-vibe state when the selected time has no reports", () => {

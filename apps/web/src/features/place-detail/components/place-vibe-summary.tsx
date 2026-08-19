@@ -113,11 +113,11 @@ export function PlaceVibeSummary({
           Chưa đủ dữ liệu vibe cho địa điểm này.
         </p>
       ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 2xl:grid-cols-2">
           {placeSnapshots.map((snapshot) => (
             <article
               aria-labelledby={`place-vibe-${snapshot.timeBucket}-title`}
-              className="rounded-xl border border-[#173f33]/10 bg-[#f8f3e8] p-4"
+              className="min-w-0 rounded-xl border border-[#173f33]/10 bg-[#f8f3e8] p-4"
               key={`${snapshot.dayType}-${snapshot.timeBucket}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -134,18 +134,18 @@ export function PlaceVibeSummary({
               <p className="mt-2 text-xs font-semibold text-[#6b7d74]">
                 {evidenceLabel(snapshot)}
               </p>
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                 {dimensions.map((dimension) => {
                   const score = snapshot.scores[dimension];
                   return (
                     <div
-                      className="flex items-center justify-between gap-2 rounded-lg bg-white/75 px-2.5 py-2"
+                      className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white/75 px-2.5 py-2"
                       key={dimension}
                     >
-                      <dt className="text-[#5e746a]">
+                      <dt className="min-w-0 leading-5 break-words text-[#5e746a]">
                         {vibeLabels[dimension]}
                       </dt>
-                      <dd className="font-bold text-[#18352d]">
+                      <dd className="text-right font-bold whitespace-nowrap text-[#18352d]">
                         {score === null ? "Chưa có" : `${score.toFixed(1)}/5`}
                       </dd>
                     </div>

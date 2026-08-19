@@ -114,6 +114,7 @@ volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:d
 
 - `GET /v1/health`
 - `GET /v1/auth/me` (requires a signed server assertion)
+- `POST /v1/places/:slug/vibe-reports` (requires authentication; starts in `pending` moderation)
 - `GET /v1/places?bbox=west,south,east,north&limit=50`
 - `GET /v1/places?lat=10.775&lng=106.700&radius=1500&limit=50`
 - `GET /v1/places/:slug`

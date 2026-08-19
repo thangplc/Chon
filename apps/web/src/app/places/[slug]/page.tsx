@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getPublicMapConfiguration } from "@/config/map";
+import { AuthControls } from "@/features/auth/components/auth-controls";
 import { PlaceDetailView } from "@/features/place-detail/components/place-detail-view";
 import { loadPlaceDetailBySlug } from "@/features/place-detail/data/place-detail-loader";
 import { loadPlaceVibeBySlug } from "@/features/place-detail/data/place-vibe-loader";
@@ -41,11 +42,16 @@ export default async function PlaceDetailPage({
   if (!place) notFound();
 
   return (
-    <PlaceDetailView
-      mapStyleUrl={getPublicMapConfiguration().styleUrl}
-      place={place}
-      vibeError={vibeResult === null}
-      vibeSnapshots={vibeResult ?? []}
-    />
+    <>
+      <div className="flex justify-end border-b border-[#ddd2c3] bg-[#fffdf9] px-4 py-2 sm:px-6 lg:px-8">
+        <AuthControls />
+      </div>
+      <PlaceDetailView
+        mapStyleUrl={getPublicMapConfiguration().styleUrl}
+        place={place}
+        vibeError={vibeResult === null}
+        vibeSnapshots={vibeResult ?? []}
+      />
+    </>
   );
 }
