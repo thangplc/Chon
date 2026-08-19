@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 
@@ -20,6 +20,14 @@ import { places, vibeReports } from "../database/schema";
 import type { AuthUser } from "../../../../packages/contracts/src/auth";
 
 const CHON_TIME_ZONE = "Asia/Ho_Chi_Minh";
+const VERIFIED_DISTANCE_METERS = 150;
+const VERIFIED_ACCURACY_METERS = 100;
+const APPROXIMATE_DISTANCE_METERS = 500;
+const APPROXIMATE_ACCURACY_METERS = 500;
+const LOCATION_EVIDENCE_MAX_AGE_MS = 10 * 60 * 1_000;
+const LOCATION_VISIT_MAX_GAP_MS = 6 * 60 * 60 * 1_000;
+
+type LocationVerification = "none" | "approximate" | "verified";
 
 export class VibeReportValidationError extends Error {
   constructor(message: string) {
@@ -49,6 +57,7 @@ export class VibeReportsService {
     user: AuthUser,
   ): Promise<{
     id: string;
+    locationVerification: LocationVerification;
     moderationStatus: "pending";
     placeId: string;
     submittedAt: Date;
@@ -63,8 +72,19 @@ export class VibeReportsService {
       throw new VibeReportValidationError("visitedAt cannot be in the future");
     }
 
+    const locationEvidence = report.locationEvidence;
+    if (locationEvidence) validateLocationEvidence(locationEvidence.capturedAt);
+
+    const distanceExpression = locationEvidence
+      ? sql<number>`ST_Distance(
+          ${places.location}::geography,
+          ST_SetSRID(ST_MakePoint(${locationEvidence.longitude}, ${locationEvidence.latitude}), 4326)::geography
+        )`
+      : sql<null>`NULL`;
+
     const [place] = await this.db
       .select({
+        distanceMeters: distanceExpression,
         id: places.id,
         isSimulated: places.isSimulated,
       })
@@ -81,6 +101,16 @@ export class VibeReportsService {
       throw new VibeReportPlaceNotFoundError();
     }
 
+    const locationVerification = isEvidenceRelevantToVisit(
+      locationEvidence?.capturedAt,
+      visitedAt,
+    )
+      ? determineLocationVerification(
+          place.distanceMeters,
+          locationEvidence?.accuracyMeters,
+        )
+      : "none";
+
     const submittedAt = new Date();
     const [created] = await this.db
       .insert(vibeReports)
@@ -91,7 +121,7 @@ export class VibeReportsService {
         internalId: `community_${randomUUID().replaceAll("-", "")}`,
         isSimulated: false,
         lighting: report.scores.lighting ?? null,
-        locationVerification: "none",
+        locationVerification,
         moderationStatus: "pending",
         noise: report.scores.noise ?? null,
         placeId: place.id,
@@ -116,11 +146,55 @@ export class VibeReportsService {
 
     return {
       id: created.id,
+      locationVerification,
       moderationStatus: "pending",
       placeId: created.placeId,
       submittedAt: created.submittedAt,
     };
   }
+}
+
+function validateLocationEvidence(capturedAtValue: string): void {
+  const capturedAt = new Date(capturedAtValue).getTime();
+  const age = Date.now() - capturedAt;
+  if (age < -60_000 || age > LOCATION_EVIDENCE_MAX_AGE_MS) {
+    throw new VibeReportValidationError(
+      "locationEvidence has expired; please verify your location again",
+    );
+  }
+}
+
+function isEvidenceRelevantToVisit(
+  capturedAtValue: string | undefined,
+  visitedAt: Date,
+): boolean {
+  if (!capturedAtValue) return false;
+  return (
+    Math.abs(new Date(capturedAtValue).getTime() - visitedAt.getTime()) <=
+    LOCATION_VISIT_MAX_GAP_MS
+  );
+}
+
+export function determineLocationVerification(
+  distanceValue: number | string | null,
+  accuracyMeters?: number,
+): LocationVerification {
+  if (distanceValue === null || accuracyMeters === undefined) return "none";
+  const distanceMeters = Number(distanceValue);
+  if (!Number.isFinite(distanceMeters)) return "none";
+  if (
+    distanceMeters <= VERIFIED_DISTANCE_METERS &&
+    accuracyMeters <= VERIFIED_ACCURACY_METERS
+  ) {
+    return "verified";
+  }
+  if (
+    distanceMeters <= APPROXIMATE_DISTANCE_METERS &&
+    accuracyMeters <= APPROXIMATE_ACCURACY_METERS
+  ) {
+    return "approximate";
+  }
+  return "none";
 }
 
 function parseInput(input: unknown): CommunityVibeReportInput {

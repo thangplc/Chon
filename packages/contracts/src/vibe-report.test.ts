@@ -40,11 +40,15 @@ describe("community vibe report contract", () => {
       vibeReportSubmissionResponseSchema.parse({
         data: {
           id: "11111111-1111-4111-8111-111111111111",
+          locationVerification: "verified",
           moderationStatus: "pending",
           placeId: "22222222-2222-4222-8222-222222222222",
           submittedAt: "2026-08-17T02:00:00.000Z",
         },
-      }).data.moderationStatus,
-    ).toBe("pending");
+      }).data,
+    ).toMatchObject({
+      locationVerification: "verified",
+      moderationStatus: "pending",
+    });
   });
 });

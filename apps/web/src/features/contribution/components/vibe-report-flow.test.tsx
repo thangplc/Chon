@@ -13,6 +13,25 @@ describe("VibeReportFlow", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     window.history.replaceState({}, "", "/places/goc-may-01");
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: {
+        getCurrentPosition: vi.fn((success: PositionCallback) =>
+          success({
+            coords: {
+              accuracy: 30,
+              altitude: null,
+              altitudeAccuracy: null,
+              heading: null,
+              latitude: 10.78,
+              longitude: 106.7,
+              speed: null,
+            } as GeolocationCoordinates,
+            timestamp: Date.now(),
+          } as GeolocationPosition),
+        ),
+      },
+    });
   });
 
   it("walks through three steps and submits a pending report", async () => {
@@ -26,6 +45,7 @@ describe("VibeReportFlow", () => {
           JSON.stringify({
             data: {
               id: "33333333-3333-4333-8333-333333333333",
+              locationVerification: "none",
               moderationStatus: "pending",
               placeId: "22222222-2222-4222-8222-222222222222",
               submittedAt: "2026-08-16T02:00:00.000Z",
@@ -42,6 +62,8 @@ describe("VibeReportFlow", () => {
       await screen.findByRole("heading", { name: /Bạn ghé Chốn này khi nào/ }),
     ).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "Xác minh vị trí" }));
+    expect(screen.getByText("Đã lấy vị trí")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
     expect(
       screen.getByRole("heading", { name: /Chấm nhanh không khí/ }),
@@ -77,6 +99,11 @@ describe("VibeReportFlow", () => {
     expect(
       JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)),
     ).toMatchObject({
+      locationEvidence: {
+        accuracyMeters: 30,
+        latitude: 10.78,
+        longitude: 106.7,
+      },
       scores: { noise: 1, privacy: 4, workability: 5 },
       shortNote: "Buổi sáng khá yên tĩnh.",
       visitMode: "work",
@@ -98,7 +125,8 @@ describe("VibeReportFlow", () => {
     await screen.getByRole("button", { name: "Đăng nhập bằng Google" }).click();
 
     expect(signInMock).toHaveBeenCalledWith("google", {
-      callbackUrl: "http://localhost:3000/places/goc-may-01?contribute=1",
+      callbackUrl:
+        "http://localhost:3000/places/goc-may-01?contribute=1&place=goc-may-01",
     });
   });
 

@@ -24,6 +24,15 @@ export const vibeReportDimensionSchema = z.enum([
 
 export type VibeReportDimension = z.infer<typeof vibeReportDimensionSchema>;
 
+export const locationEvidenceSchema = z
+  .object({
+    accuracyMeters: z.number().finite().min(0).max(5_000),
+    capturedAt: z.string().datetime({ offset: true }),
+    latitude: z.number().finite().min(-90).max(90),
+    longitude: z.number().finite().min(-180).max(180),
+  })
+  .strict();
+
 const scoreSchema = z.number().int().min(1).max(5);
 
 const scoresSchema = z
@@ -51,6 +60,7 @@ const scoresSchema = z
 
 export const communityVibeReportInputSchema = z
   .object({
+    locationEvidence: locationEvidenceSchema.optional(),
     seatAvailability: z
       .enum(["easy", "normal", "difficult", "unknown"])
       .optional(),
@@ -68,6 +78,7 @@ export type CommunityVibeReportInput = z.infer<
 export const vibeReportSubmissionResponseSchema = z.object({
   data: z.object({
     id: z.string().uuid(),
+    locationVerification: z.enum(["none", "approximate", "verified"]),
     moderationStatus: z.literal("pending"),
     placeId: z.string().uuid(),
     submittedAt: z.coerce.date(),

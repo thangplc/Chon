@@ -2,10 +2,11 @@
 
 ## Scope
 
-Sprint 5.2 adds a three-step, mobile-first community report flow from Place
-Detail. Explore and Place Detail remain public; submitting a report requires a
-Google-authenticated user. A guest is sent through Auth.js and returned to the
-same Place Detail URL.
+Sprint 5.2 adds a three-step, mobile-first community report flow from both
+Explore and Place Detail. Explore and Place Detail remain public; submitting a
+report requires a Google-authenticated user. A guest is sent through Auth.js
+and returned to the same origin URL. Explore preserves `contribute=1` and
+`place=<slug>` alongside its filter query.
 
 ## API
 
@@ -46,3 +47,20 @@ the next operational task.
 
 GPS/near-place verification, rate limiting, moderation controls, hide/restore
 and immediate snapshot refresh are out of scope for this task.
+
+## Near-place verification
+
+Sprint 5.3 adds optional, user-triggered near-place verification. The browser
+requests geolocation only after the user presses `Xác minh vị trí` and sends a
+short-lived `locationEvidence` object with the report. The API uses PostGIS to
+calculate the distance to the canonical POI and owns the resulting value:
+
+- `verified`: at most 150 metres away with accuracy at most 100 metres.
+- `approximate`: at most 500 metres away with accuracy at most 500 metres.
+- `none`: no evidence, insufficient accuracy or outside the accepted radius.
+
+Evidence older than ten minutes is rejected. Exact user coordinates and the
+calculated distance are not persisted; only `location_verification` is stored
+on `vibe_reports`. Evidence only verifies a visit within six hours of capture;
+older recalled visits remain `none`. This is a proximity signal, not proof that
+a user entered or purchased from the venue.
