@@ -155,9 +155,6 @@ describe("ExploreExperience", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Bản đồ chưa được cấu hình")).toBeInTheDocument();
     expect(
-      screen.getByRole("complementary", { name: "Nguồn dữ liệu" }),
-    ).toHaveClass("chon-map-source-label");
-    expect(
       screen.getByRole("region", { name: "Bản đồ các địa điểm" }).parentElement,
     ).toHaveClass("self-start", "lg:sticky", "lg:top-4");
   });

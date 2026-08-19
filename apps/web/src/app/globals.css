@@ -157,32 +157,6 @@ body {
   background: #e5ded3;
 }
 
-.chon-map-source-label {
-  position: absolute;
-  top: 7.25rem;
-  right: 0.75rem;
-  z-index: 20;
-  max-width: min(26rem, calc(100% - 1.5rem));
-  overflow-wrap: anywhere;
-  border: 1px solid rgb(221 210 195 / 85%);
-  border-radius: 0.75rem;
-  background: rgb(255 253 249 / 94%);
-  padding: 0.55rem 0.75rem;
-  color: #756c63;
-  font-size: 0.6875rem;
-  line-height: 1.35;
-  box-shadow: 0 0.5rem 1.25rem rgb(69 50 37 / 12%);
-  backdrop-filter: blur(8px);
-}
-
-@media (width < 48rem) {
-  .chon-map-source-label {
-    top: 6.5rem;
-    right: 0.75rem;
-    max-width: min(22rem, calc(100% - 1.5rem));
-  }
-}
-
 .chon-purpose-nav {
   font-size: 0.75rem;
 }

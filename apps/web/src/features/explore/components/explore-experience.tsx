@@ -1508,16 +1508,6 @@ export function ExploreExperience({
               </div>
             </aside>
           )}
-          <aside aria-label="Nguồn dữ liệu" className="chon-map-source-label">
-            <strong className="mr-1 font-extrabold">Nguồn dữ liệu:</strong>
-            <span>
-              {dataset.source === "database_real"
-                ? "Địa điểm: VIETMAP · Vibe: community đã xác minh (nếu có) · PostgreSQL"
-                : dataset.source === "database_mixed"
-                  ? "Địa điểm: VIETMAP + seed · Vibe: community giả lập · PostgreSQL"
-                  : "Địa điểm + vibe: community giả lập · PostgreSQL"}
-            </span>
-          </aside>
         </section>
       </div>
     </main>
