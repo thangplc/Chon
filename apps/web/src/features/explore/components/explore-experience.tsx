@@ -24,9 +24,11 @@ import {
   type TimeBucket,
   type VibeDimension,
 } from "../domain/explore-contract";
+import { exploreDatasetResponseSchema } from "@chon/contracts/backend";
 import { getExplorePlaces, getExploreTimeContext } from "../domain/explore";
 import type { UserLocation } from "../hooks/use-geolocation";
 import { trackExploreEvent } from "../analytics/explore-analytics";
+import { VibeReportFlow } from "@/features/contribution/components/vibe-report-flow";
 import {
   createDefaultExploreUrlState,
   parseExploreUrlState,
@@ -117,6 +119,12 @@ function getTodayDateValue(): string {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+function getInitialContributionPlaceSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("contribute") === "1" ? params.get("place") : null;
+}
+
 function formatDuration(durationMinutes: number): string {
   if (durationMinutes % 60 === 0) return `${durationMinutes / 60} giờ`;
   return `${Math.floor(durationMinutes / 60)} giờ ${durationMinutes % 60} phút`;
@@ -133,6 +141,14 @@ function toggleSetValue<T>(current: ReadonlySet<T>, value: T): Set<T> {
   if (next.has(value)) next.delete(value);
   else next.add(value);
   return next;
+}
+
+function areSetsEqual<T>(left: ReadonlySet<T>, right: ReadonlySet<T>): boolean {
+  if (left.size !== right.size) return false;
+  for (const value of left) {
+    if (!right.has(value)) return false;
+  }
+  return true;
 }
 
 function locationModeLabel(
@@ -239,6 +255,7 @@ export function ExploreExperience({
   dataset,
   mapStyleUrl,
 }: ExploreExperienceProps) {
+  const [activeDataset, setActiveDataset] = useState(dataset);
   const [purpose, setPurpose] = useState<PurposeId>("work");
   const [timeBucket, setTimeBucket] = useState<TimeBucket>("morning");
   const initialDateValue = getTodayDateValue();
@@ -259,6 +276,20 @@ export function ExploreExperience({
     ReadonlySet<ExplorePriceLevel>
   >(new Set());
   const [priceRangeId, setPriceRangeId] = useState("any");
+  const [appliedSizes, setAppliedSizes] = useState<
+    ReadonlySet<ExploreSizeCategory>
+  >(new Set());
+  const [appliedAmenities, setAppliedAmenities] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const [appliedPriceLevels, setAppliedPriceLevels] = useState<
+    ReadonlySet<ExplorePriceLevel>
+  >(new Set());
+  const [appliedPriceRangeId, setAppliedPriceRangeId] = useState("any");
+  const [filterApplyStatus, setFilterApplyStatus] = useState<
+    "idle" | "loading" | "error"
+  >("idle");
+  const [filterApplyError, setFilterApplyError] = useState<string | null>(null);
   const [urlHydrated, setUrlHydrated] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "error">(
     "idle",
@@ -280,6 +311,12 @@ export function ExploreExperience({
     useState(false);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [isSelectionCardOpen, setIsSelectionCardOpen] = useState(false);
+  const [selectionCardMounted, setSelectionCardMounted] = useState(false);
+  const [isSelectionCardClosing, setIsSelectionCardClosing] = useState(false);
+  const [contributionPlaceSlug, setContributionPlaceSlug] = useState(
+    getInitialContributionPlaceSlug,
+  );
   const [mapAvailabilityStatus, setMapAvailabilityStatus] =
     useState<ExploreMapStatus>(mapStyleUrl ? "loading" : "unconfigured");
   const [visiblePlaceIds, setVisiblePlaceIds] =
@@ -292,36 +329,103 @@ export function ExploreExperience({
     useState<MapViewportBounds | null>(null);
   const viewportRequestRef = useRef<AbortController | null>(null);
   const locationRequestRef = useRef<AbortController | null>(null);
+  const selectedPlaceIdRef = useRef<string | null>(null);
+  const selectionCardCloseTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const cardRefs = useRef(new Map<string, HTMLButtonElement>());
   const urlHydrationRef = useRef(false);
   const previousAnalyticsKeyRef = useRef<string | null>(null);
 
+  const updateSelectedPlaceId = useCallback((placeId: string | null) => {
+    selectedPlaceIdRef.current = placeId;
+    setSelectedPlaceId(placeId);
+  }, []);
+
+  const cancelSelectionCardClose = useCallback(() => {
+    if (selectionCardCloseTimerRef.current === null) return;
+    clearTimeout(selectionCardCloseTimerRef.current);
+    selectionCardCloseTimerRef.current = null;
+  }, []);
+
+  const openSelectionCard = useCallback(() => {
+    cancelSelectionCardClose();
+    setSelectionCardMounted(true);
+    setIsSelectionCardClosing(false);
+    setIsSelectionCardOpen(true);
+  }, [cancelSelectionCardClose]);
+
+  const closeSelectionCard = useCallback(() => {
+    cancelSelectionCardClose();
+    if (!selectionCardMounted) return;
+
+    setIsSelectionCardOpen(false);
+    setIsSelectionCardClosing(true);
+    selectionCardCloseTimerRef.current = setTimeout(() => {
+      setSelectionCardMounted(false);
+      setIsSelectionCardClosing(false);
+      selectionCardCloseTimerRef.current = null;
+    }, 160);
+  }, [cancelSelectionCardClose, selectionCardMounted]);
+
+  const clearSelectedPlace = useCallback(() => {
+    cancelSelectionCardClose();
+    updateSelectedPlaceId(null);
+    setSelectionCardMounted(false);
+    setIsSelectionCardClosing(false);
+    setIsSelectionCardOpen(false);
+    setContributionPlaceSlug(null);
+  }, [cancelSelectionCardClose, updateSelectedPlaceId]);
+
+  const handlePlaceSelect = useCallback(
+    (placeId: string) => {
+      if (selectedPlaceId === placeId) {
+        if (isSelectionCardOpen) closeSelectionCard();
+        else openSelectionCard();
+        return;
+      }
+
+      setContributionPlaceSlug(null);
+      updateSelectedPlaceId(placeId);
+      openSelectionCard();
+    },
+    [
+      closeSelectionCard,
+      isSelectionCardOpen,
+      openSelectionCard,
+      selectedPlaceId,
+      updateSelectedPlaceId,
+    ],
+  );
+
   const results = useMemo(
     () =>
-      getExplorePlaces(dataset, {
+      getExplorePlaces(activeDataset, {
         dayType,
         district,
         placeIds: locationPlaceIds ?? undefined,
-        amenities: selectedAmenities,
-        priceLevels: selectedPriceLevels,
+        amenities: appliedAmenities,
+        priceLevels: appliedPriceLevels,
         priceMax:
-          priceRangeOptions.find(({ id }) => id === priceRangeId)?.max ?? null,
+          priceRangeOptions.find(({ id }) => id === appliedPriceRangeId)?.max ??
+          null,
         priceMin:
-          priceRangeOptions.find(({ id }) => id === priceRangeId)?.min ?? null,
+          priceRangeOptions.find(({ id }) => id === appliedPriceRangeId)?.min ??
+          null,
         purpose,
-        sizeCategories: selectedSizes,
+        sizeCategories: appliedSizes,
         timeBucket,
       }),
     [
-      dataset,
+      activeDataset,
+      appliedAmenities,
+      appliedPriceLevels,
+      appliedPriceRangeId,
+      appliedSizes,
       dayType,
       district,
       locationPlaceIds,
-      priceRangeId,
       purpose,
-      selectedAmenities,
-      selectedPriceLevels,
-      selectedSizes,
       timeBucket,
     ],
   );
@@ -338,68 +442,88 @@ export function ExploreExperience({
   );
   const selectedPurpose = purposes.find(({ id }) => id === purpose);
   const selectedPlace = results.find(({ id }) => id === selectedPlaceId);
+  const contributionPlace = contributionPlaceSlug
+    ? (activeDataset.places.find(
+        ({ slug }) => slug === contributionPlaceSlug,
+      ) ?? null)
+    : null;
+
   const amenityOptions = useMemo(() => {
     const options = new Set(["Wi-Fi", "Ổ cắm điện", "Điều hòa"]);
-    dataset.places.forEach((place) => {
+    activeDataset.places.forEach((place) => {
       place.amenities.forEach((amenity) => options.add(amenity));
     });
     return [...options].sort((left, right) => left.localeCompare(right, "vi"));
-  }, [dataset.places]);
-  const activeMetadataFilterCount =
+  }, [activeDataset.places]);
+  const pendingMetadataFilterCount =
     selectedSizes.size +
     selectedAmenities.size +
     selectedPriceLevels.size +
     (priceRangeId === "any" ? 0 : 1);
+  const appliedMetadataFilterCount =
+    appliedSizes.size +
+    appliedAmenities.size +
+    appliedPriceLevels.size +
+    (appliedPriceRangeId === "any" ? 0 : 1);
+  const hasPendingMetadataChanges =
+    !areSetsEqual(selectedSizes, appliedSizes) ||
+    !areSetsEqual(selectedAmenities, appliedAmenities) ||
+    !areSetsEqual(selectedPriceLevels, appliedPriceLevels) ||
+    priceRangeId !== appliedPriceRangeId;
 
   const urlState = useMemo<ExploreUrlState>(
     () => ({
-      amenities: [...selectedAmenities],
+      amenities: [...appliedAmenities],
       dateValue,
       district,
       durationMinutes,
       exactTime,
       locationQuery,
-      priceLevels: [...selectedPriceLevels],
-      priceRangeId: priceRangeId as ExploreUrlState["priceRangeId"],
+      priceLevels: [...appliedPriceLevels],
+      priceRangeId: appliedPriceRangeId as ExploreUrlState["priceRangeId"],
       purpose,
-      sizes: [...selectedSizes],
+      sizes: [...appliedSizes],
       timeBucket,
     }),
     [
+      appliedAmenities,
+      appliedPriceLevels,
+      appliedPriceRangeId,
+      appliedSizes,
       dateValue,
       district,
       durationMinutes,
       exactTime,
       locationQuery,
-      priceRangeId,
-      selectedAmenities,
-      selectedPriceLevels,
-      selectedSizes,
       purpose,
       timeBucket,
     ],
   );
+  const detailSearch = useMemo(
+    () => serializeExploreUrlState(urlState),
+    [urlState],
+  );
   const analyticsContext = useMemo<AnalyticsEventPayload>(
     () => ({
-      amenityCount: selectedAmenities.size,
+      amenityCount: appliedAmenities.size,
       dayType,
       district: district === "all" ? null : district,
       durationMinutes,
-      priceLevelCount: selectedPriceLevels.size,
+      priceLevelCount: appliedPriceLevels.size,
       priceRangeId: urlState.priceRangeId,
       purpose,
       resultCount: results.length,
-      sizeCount: selectedSizes.size,
+      sizeCount: appliedSizes.size,
       timeBucket,
     }),
     [
+      appliedAmenities.size,
+      appliedPriceLevels.size,
+      appliedSizes.size,
       dayType,
       district,
       durationMinutes,
       results.length,
-      selectedAmenities.size,
-      selectedPriceLevels.size,
-      selectedSizes.size,
       purpose,
       timeBucket,
       urlState.priceRangeId,
@@ -412,6 +536,72 @@ export function ExploreExperience({
     setSelectedPriceLevels(new Set());
     setPriceRangeId("any");
   }, []);
+
+  const applyMetadataFilters = useCallback(async () => {
+    if (filterApplyStatus === "loading") return;
+
+    setFilterApplyStatus("loading");
+    setFilterApplyError(null);
+
+    try {
+      const searchParams = new URLSearchParams();
+      if (selectedSizes.size > 0) {
+        searchParams.set("size", [...selectedSizes].sort().join(","));
+      }
+      if (selectedAmenities.size > 0) {
+        searchParams.set(
+          "amenities",
+          [...selectedAmenities]
+            .sort((left, right) => left.localeCompare(right, "vi"))
+            .join(","),
+        );
+      }
+      if (selectedPriceLevels.size > 0) {
+        searchParams.set(
+          "price_levels",
+          [...selectedPriceLevels]
+            .sort((left, right) => left - right)
+            .join(","),
+        );
+      }
+      if (priceRangeId !== "any") {
+        searchParams.set("price_range", priceRangeId);
+      }
+
+      const query = searchParams.toString();
+      const response = await fetch(
+        `/api/explore/simulated${query ? `?${query}` : ""}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) {
+        throw new Error(`Explore API returned ${response.status}`);
+      }
+
+      const nextDataset = exploreDatasetResponseSchema.parse(
+        await response.json(),
+      ).data;
+      setActiveDataset(nextDataset);
+      setAppliedSizes(new Set(selectedSizes));
+      setAppliedAmenities(new Set(selectedAmenities));
+      setAppliedPriceLevels(new Set(selectedPriceLevels));
+      setAppliedPriceRangeId(priceRangeId);
+      setFilterApplyStatus("idle");
+      clearSelectedPlace();
+      setFilterPanelOpen(false);
+    } catch {
+      setFilterApplyStatus("error");
+      setFilterApplyError(
+        "Không thể áp dụng bộ lọc lúc này. Danh sách hiện tại được giữ nguyên.",
+      );
+    }
+  }, [
+    clearSelectedPlace,
+    filterApplyStatus,
+    priceRangeId,
+    selectedAmenities,
+    selectedPriceLevels,
+    selectedSizes,
+  ]);
 
   const handleShare = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -483,10 +673,10 @@ export function ExploreExperience({
       setDistrict("all");
       setLocationQuery("");
       setLocationSelectionEnabled(false);
-      setSelectedPlaceId(null);
+      clearSelectedPlace();
       void queryRadius(center, radiusMeters);
     },
-    [queryRadius, radiusMeters],
+    [clearSelectedPlace, queryRadius, radiusMeters],
   );
 
   const handleUserLocationChange = useCallback(
@@ -523,7 +713,7 @@ export function ExploreExperience({
         return;
       }
 
-      const matchingPlaceIds = dataset.places
+      const matchingPlaceIds = activeDataset.places
         .filter((place) =>
           [place.name, place.address, place.district].some((value) =>
             value.toLocaleLowerCase("vi-VN").includes(normalizedQuery),
@@ -537,9 +727,9 @@ export function ExploreExperience({
       setLocationPlaceIds(new Set(matchingPlaceIds));
       setLocationQueryStatus("ready");
       setLocationError(null);
-      setSelectedPlaceId(null);
+      clearSelectedPlace();
     },
-    [dataset.places, locationQuery],
+    [activeDataset.places, clearSelectedPlace, locationQuery],
   );
 
   const handleDistrictChange = useCallback(
@@ -552,9 +742,9 @@ export function ExploreExperience({
       setLocationQueryStatus("idle");
       setLocationError(null);
       setLocationSelectionEnabled(false);
-      setSelectedPlaceId(null);
+      clearSelectedPlace();
     },
-    [],
+    [clearSelectedPlace],
   );
 
   const updateExactTime = useCallback((nextDate: string, nextTime: string) => {
@@ -577,7 +767,7 @@ export function ExploreExperience({
       .trim()
       .toLocaleLowerCase("vi-VN");
     const matchingPlaceIds = normalizedQuery
-      ? dataset.places
+      ? activeDataset.places
           .filter((place) =>
             [place.name, place.address, place.district].some((value) =>
               value.toLocaleLowerCase("vi-VN").includes(normalizedQuery),
@@ -596,6 +786,10 @@ export function ExploreExperience({
     setSelectedAmenities(new Set(parsed.amenities));
     setSelectedPriceLevels(new Set(parsed.priceLevels));
     setPriceRangeId(parsed.priceRangeId);
+    setAppliedSizes(new Set(parsed.sizes));
+    setAppliedAmenities(new Set(parsed.amenities));
+    setAppliedPriceLevels(new Set(parsed.priceLevels));
+    setAppliedPriceRangeId(parsed.priceRangeId);
     setDistrict(parsed.district);
     setLocationQuery(parsed.locationQuery);
     setLocationMode(
@@ -609,21 +803,42 @@ export function ExploreExperience({
       parsed.locationQuery ? new Set(matchingPlaceIds) : null,
     );
     setLocationQueryStatus(parsed.locationQuery ? "ready" : "idle");
-    setSelectedPlaceId(null);
+    clearSelectedPlace();
+    const requestedContributionSlug = getInitialContributionPlaceSlug();
+    const requestedContributionPlace = requestedContributionSlug
+      ? activeDataset.places.find(
+          ({ slug }) => slug === requestedContributionSlug,
+        )
+      : null;
+    if (requestedContributionPlace) {
+      queueMicrotask(() => {
+        updateSelectedPlaceId(requestedContributionPlace.id);
+        openSelectionCard();
+        setContributionPlaceSlug(requestedContributionPlace.slug);
+      });
+    }
     urlHydrationRef.current = true;
     setUrlHydrated(true);
-  }, [dataset.places]);
+  }, [
+    clearSelectedPlace,
+    activeDataset.places,
+    openSelectionCard,
+    updateSelectedPlaceId,
+  ]);
 
   useEffect(() => {
     if (!urlHydrated || typeof window === "undefined") return;
 
-    const nextSearch = serializeExploreUrlState(urlState);
+    const contributionSearch = contributionPlaceSlug
+      ? `&contribute=1&place=${encodeURIComponent(contributionPlaceSlug)}`
+      : "";
+    const nextSearch = `${serializeExploreUrlState(urlState)}${contributionSearch}`;
     const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`;
     if (currentUrl !== nextUrl) {
       window.history.replaceState(null, "", nextUrl);
     }
-  }, [urlHydrated, urlState]);
+  }, [contributionPlaceSlug, urlHydrated, urlState]);
 
   useEffect(() => {
     if (!urlHydrated) return;
@@ -662,64 +877,75 @@ export function ExploreExperience({
       ? `${visibleResults.length} Chốn trong vùng bản đồ`
       : `${visibleResults.length} Chốn để thử`;
 
-  const queryViewport = useCallback(async (bounds: MapViewportBounds) => {
-    setLatestViewport(bounds);
-    viewportRequestRef.current?.abort();
+  const queryViewport = useCallback(
+    async (bounds: MapViewportBounds) => {
+      setLatestViewport(bounds);
+      viewportRequestRef.current?.abort();
 
-    if (
-      bounds.west >= bounds.east ||
-      bounds.south >= bounds.north ||
-      bounds.east - bounds.west > 1 ||
-      bounds.north - bounds.south > 1
-    ) {
-      setVisiblePlaceIds(null);
-      setViewportHasMore(false);
-      setViewportStatus("error");
-      setViewportError("Hãy phóng to bản đồ để tìm trong vùng nhỏ hơn.");
-      return;
-    }
-
-    const controller = new AbortController();
-    viewportRequestRef.current = controller;
-    setViewportStatus("loading");
-    setViewportError(null);
-
-    try {
-      const bbox = [bounds.west, bounds.south, bounds.east, bounds.north]
-        .map((value) => value.toFixed(6))
-        .join(",");
-      const searchParams = new URLSearchParams({ bbox, limit: "100" });
-      const response = await fetch(`/api/places?${searchParams}`, {
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        throw new Error(`Spatial API returned ${response.status}`);
+      if (
+        bounds.west >= bounds.east ||
+        bounds.south >= bounds.north ||
+        bounds.east - bounds.west > 1 ||
+        bounds.north - bounds.south > 1
+      ) {
+        setVisiblePlaceIds(null);
+        setViewportHasMore(false);
+        setViewportStatus("error");
+        setViewportError("Hãy phóng to bản đồ để tìm trong vùng nhỏ hơn.");
+        return;
       }
 
-      const spatialResults = readSpatialPlaceIds(await response.json());
-      if (controller.signal.aborted) return;
+      const controller = new AbortController();
+      viewportRequestRef.current = controller;
+      setViewportStatus("loading");
+      setViewportError(null);
 
-      const nextVisiblePlaceIds = new Set(spatialResults.placeIds);
-      setVisiblePlaceIds(nextVisiblePlaceIds);
-      setViewportHasMore(spatialResults.hasMore);
-      setViewportStatus("ready");
-      setSelectedPlaceId((current) =>
-        current && !nextVisiblePlaceIds.has(current) ? null : current,
-      );
-    } catch (error) {
-      if (controller.signal.aborted) return;
+      try {
+        const bbox = [bounds.west, bounds.south, bounds.east, bounds.north]
+          .map((value) => value.toFixed(6))
+          .join(",");
+        const searchParams = new URLSearchParams({ bbox, limit: "100" });
+        const response = await fetch(`/api/places?${searchParams}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`Spatial API returned ${response.status}`);
+        }
 
-      setVisiblePlaceIds(null);
-      setViewportHasMore(false);
-      setViewportStatus("error");
-      setViewportError(
-        error instanceof Error
-          ? "Không thể cập nhật theo vùng bản đồ. Đang hiển thị danh sách dự phòng."
-          : "Không thể cập nhật theo vùng bản đồ.",
-      );
-    }
-  }, []);
+        const spatialResults = readSpatialPlaceIds(await response.json());
+        if (controller.signal.aborted) return;
+
+        const nextVisiblePlaceIds = new Set(spatialResults.placeIds);
+        setVisiblePlaceIds(nextVisiblePlaceIds);
+        setViewportHasMore(spatialResults.hasMore);
+        setViewportStatus("ready");
+        const currentSelectedPlaceId = selectedPlaceIdRef.current;
+        if (
+          currentSelectedPlaceId &&
+          !nextVisiblePlaceIds.has(currentSelectedPlaceId)
+        ) {
+          updateSelectedPlaceId(null);
+          cancelSelectionCardClose();
+          setSelectionCardMounted(false);
+          setIsSelectionCardClosing(false);
+          setIsSelectionCardOpen(false);
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+
+        setVisiblePlaceIds(null);
+        setViewportHasMore(false);
+        setViewportStatus("error");
+        setViewportError(
+          error instanceof Error
+            ? "Không thể cập nhật theo vùng bản đồ. Đang hiển thị danh sách dự phòng."
+            : "Không thể cập nhật theo vùng bản đồ.",
+        );
+      }
+    },
+    [cancelSelectionCardClose, updateSelectedPlaceId],
+  );
 
   const handleViewportChange = useCallback(
     (bounds: MapViewportBounds) => {
@@ -752,8 +978,9 @@ export function ExploreExperience({
     () => () => {
       viewportRequestRef.current?.abort();
       locationRequestRef.current?.abort();
+      cancelSelectionCardClose();
     },
-    [],
+    [cancelSelectionCardClose],
   );
 
   useEffect(() => {
@@ -815,13 +1042,6 @@ export function ExploreExperience({
               ? "Không thể sao chép"
               : "Provider vibe: Tắt"}
           </Badge>
-          <button
-            className="chon-tablet-filter-trigger hidden rounded-full border border-[#ddd2c3] bg-[#fffdf9] px-3 py-2 text-xs font-extrabold text-[#28231f]"
-            onClick={() => setFilterPanelOpen(true)}
-            type="button"
-          >
-            Bộ lọc
-          </button>
         </div>
       </header>
 
@@ -1041,11 +1261,20 @@ export function ExploreExperience({
                 <span className="flex items-center justify-between gap-3">
                   <span>Bộ lọc quy mô, tiện ích và giá</span>
                   <Badge
-                    tone={activeMetadataFilterCount > 0 ? "accent" : "neutral"}
+                    tone={
+                      hasPendingMetadataChanges ||
+                      appliedMetadataFilterCount > 0
+                        ? "accent"
+                        : "neutral"
+                    }
                   >
-                    {activeMetadataFilterCount > 0
-                      ? `${activeMetadataFilterCount} đang áp dụng`
-                      : "Tùy chọn"}
+                    {hasPendingMetadataChanges
+                      ? pendingMetadataFilterCount > 0
+                        ? `${pendingMetadataFilterCount} đang chọn`
+                        : "Đã thay đổi"
+                      : appliedMetadataFilterCount > 0
+                        ? `${appliedMetadataFilterCount} đang áp dụng`
+                        : "Tùy chọn"}
                   </Badge>
                 </span>
               </summary>
@@ -1138,13 +1367,16 @@ export function ExploreExperience({
                   </label>
                 </fieldset>
               </div>
-              {activeMetadataFilterCount > 0 && (
+              {(pendingMetadataFilterCount > 0 ||
+                appliedMetadataFilterCount > 0) && (
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#ddd2c3] pt-3">
                   <span
                     aria-live="polite"
                     className="chon-text-meta text-[#756c63]"
                   >
-                    Đang lọc theo metadata đã xác minh hoặc dữ liệu minh họa.
+                    {hasPendingMetadataChanges
+                      ? "Bộ lọc mới chỉ được áp dụng sau khi bạn xác nhận."
+                      : "Đang lọc theo metadata đã xác minh hoặc dữ liệu minh họa."}
                   </span>
                   <Button onClick={clearMetadataFilters} variant="secondary">
                     Xóa bộ lọc
@@ -1155,11 +1387,22 @@ export function ExploreExperience({
 
             <Button
               className="mt-5 w-full"
-              onClick={() => setFilterPanelOpen(false)}
+              disabled={filterApplyStatus === "loading"}
+              onClick={() => void applyMetadataFilters()}
               variant="primary"
             >
-              Áp dụng bộ lọc
+              {filterApplyStatus === "loading"
+                ? "Đang áp dụng…"
+                : "Áp dụng bộ lọc"}
             </Button>
+            {filterApplyError && (
+              <p
+                className="mt-2 text-sm font-semibold text-[#963f2a]"
+                role="alert"
+              >
+                {filterApplyError}
+              </p>
+            )}
           </div>
         </aside>
 
@@ -1298,7 +1541,7 @@ export function ExploreExperience({
                         aria-labelledby={`${placeRankId} ${placeNameId}`}
                         aria-pressed={selected}
                         className="grid w-full grid-cols-[88px_minmax(0,1fr)] gap-3 border-0 bg-transparent p-0 text-left transition focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-[#c96040] sm:grid-cols-[104px_minmax(0,1fr)]"
-                        onClick={() => setSelectedPlaceId(place.id)}
+                        onClick={() => handlePlaceSelect(place.id)}
                         ref={(element) => {
                           if (element) cardRefs.current.set(place.id, element);
                           else cardRefs.current.delete(place.id);
@@ -1394,6 +1637,26 @@ export function ExploreExperience({
                           </span>
                         </span>
                       </button>
+                      {selected && (
+                        <div className="chon-small-selection-actions mt-3 grid-cols-2 gap-2">
+                          <Link
+                            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#ddd2c3] px-3 text-sm font-extrabold text-[#28231f] transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
+                            href={`/places/${place.slug}${detailSearch}`}
+                          >
+                            Xem chi tiết
+                          </Link>
+                          <button
+                            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#c96040] px-3 text-sm font-extrabold text-white transition hover:bg-[#a94e35] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
+                            onClick={() => setContributionPlaceSlug(place.slug)}
+                            type="button"
+                          >
+                            Góp vibe
+                            <span aria-hidden="true" className="ml-1">
+                              ✦
+                            </span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </li>
                 );
@@ -1408,7 +1671,7 @@ export function ExploreExperience({
                   <span className="mt-1 block">
                     {viewportStatus === "ready"
                       ? "Hãy di chuyển bản đồ, thu nhỏ hoặc xem lại toàn bộ danh sách."
-                      : activeMetadataFilterCount > 0
+                      : appliedMetadataFilterCount > 0
                         ? "Hãy bỏ bớt bộ lọc hoặc chọn lại khu vực, thời gian và mục đích."
                         : "Hãy đổi khu vực, thời gian hoặc mục đích để xem kết quả khác."}
                   </span>
@@ -1427,7 +1690,7 @@ export function ExploreExperience({
           </div>
         </section>
 
-        <section className="chon-map-panel self-start overflow-hidden rounded-xl border border-[#ddd2c3] bg-[#e5ded3] shadow-sm lg:sticky lg:top-4">
+        <section className="chon-map-panel chon-desktop-map-sticky self-start overflow-hidden rounded-xl border border-[#ddd2c3] bg-[#e5ded3] shadow-sm">
           <a
             className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-[#28231f] focus:shadow-lg"
             href="#explore-results"
@@ -1438,22 +1701,23 @@ export function ExploreExperience({
             locationSelectionEnabled={locationSelectionEnabled}
             mapStyleUrl={mapStyleUrl}
             onSelectLocation={handleMapLocationSelect}
-            onSelectPlace={setSelectedPlaceId}
+            onSelectPlace={handlePlaceSelect}
             onUserLocationChange={handleUserLocationChange}
             onStatusChange={handleMapStatusChange}
             onViewportChange={handleViewportChange}
             places={results}
             selectedPlaceId={selectedPlaceId}
           />
-          {selectedPlace && (
+          {selectedPlace && selectionCardMounted && (
             <aside
               aria-label={"Địa điểm đang chọn: " + selectedPlace.name}
-              className="chon-map-selection-card absolute right-3 bottom-3 z-20 w-[min(380px,calc(100%-1.5rem))] rounded-xl border border-[#ddd2c3] bg-[#fffdf9] p-3 shadow-[0_16px_40px_rgba(69,50,37,0.2)] sm:right-4 sm:bottom-4 sm:p-4"
+              className="chon-map-selection-card chon-desktop-selection absolute right-3 bottom-3 z-20 w-[min(380px,calc(100%-1.5rem))] rounded-xl border border-[#ddd2c3] bg-[#fffdf9] p-3 shadow-[0_16px_40px_rgba(69,50,37,0.2)] sm:right-4 sm:bottom-4 sm:p-4"
+              data-state={isSelectionCardClosing ? "closing" : "open"}
             >
               <button
-                aria-label={"Bỏ chọn " + selectedPlace.name}
-                className="absolute top-3 right-3 grid size-8 place-items-center rounded-full border border-[#ddd2c3] bg-[#fffdf9]/95 text-lg leading-none text-[#28231f] shadow-sm transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
-                onClick={() => setSelectedPlaceId(null)}
+                aria-label={"Đóng thẻ " + selectedPlace.name}
+                className="absolute top-3 right-3 z-10 grid size-8 place-items-center rounded-full border border-[#ddd2c3] bg-[#fffdf9]/95 text-lg leading-none text-[#28231f] shadow-sm transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
+                onClick={closeSelectionCard}
                 type="button"
               >
                 ×
@@ -1495,21 +1759,47 @@ export function ExploreExperience({
               <div className="mt-3 flex gap-2">
                 <Link
                   className="chon-text-sm inline-flex min-h-10 flex-1 items-center justify-center rounded-lg border border-[#ddd2c3] px-3 font-extrabold text-[#28231f] transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
-                  href={"/places/" + selectedPlace.slug}
+                  href={`/places/${selectedPlace.slug}${detailSearch}`}
                 >
                   Mở chi tiết
                 </Link>
-                <Link
+                <button
                   className="chon-text-sm inline-flex min-h-10 flex-1 items-center justify-center rounded-lg bg-[#c96040] px-3 font-extrabold text-white transition hover:bg-[#a94e35] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
-                  href={"/places/" + selectedPlace.slug}
+                  onClick={() => setContributionPlaceSlug(selectedPlace.slug)}
+                  type="button"
                 >
-                  Góp vibe
-                </Link>
+                  Góp vibe{" "}
+                  <span aria-hidden="true" className="ml-1">
+                    ✦
+                  </span>
+                </button>
               </div>
             </aside>
           )}
+          {selectedPlace && !selectionCardMounted && (
+            <button
+              aria-label={"Mở thẻ " + selectedPlace.name}
+              className="chon-desktop-selection-toggle absolute right-3 bottom-3 z-20 rounded-xl border border-[#ddd2c3] bg-[#fffdf9] px-4 py-2.5 text-sm font-extrabold text-[#315d50] shadow-[0_10px_24px_rgba(69,50,37,0.16)] transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] sm:right-4 sm:bottom-4"
+              onClick={openSelectionCard}
+              type="button"
+            >
+              Mở thẻ
+            </button>
+          )}
         </section>
       </div>
+
+      {contributionPlace && (
+        <VibeReportFlow
+          hideTrigger
+          onOpenChange={(open) => {
+            if (!open) setContributionPlaceSlug(null);
+          }}
+          open={contributionPlaceSlug === contributionPlace.slug}
+          placeName={contributionPlace.name}
+          placeSlug={contributionPlace.slug}
+        />
+      )}
     </main>
   );
 }

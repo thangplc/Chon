@@ -2,9 +2,11 @@
 
 ## URL chia sẻ
 
-Explore đồng bộ bộ lọc vào query string canonical bằng
-`history.replaceState`, nên đổi bộ lọc không reload trang. Các tham số hiện
-được hỗ trợ:
+Explore đồng bộ bộ lọc đã áp dụng vào query string canonical bằng
+`history.replaceState`, nên đổi bộ lọc không reload trang. Các control metadata
+chỉ là trạng thái đang chọn cho đến khi người dùng bấm `Áp dụng bộ lọc`; lúc đó
+frontend gọi `/api/explore/simulated` và chỉ cập nhật URL sau khi API thành công.
+Các tham số hiện được hỗ trợ:
 
 ```text
 purpose, date, time, duration

@@ -120,6 +120,7 @@ volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:d
 - `GET /v1/places/:slug`
 - `GET /v1/places/:slug/vibe?day_type=weekday&time_bucket=morning&area_id=<uuid>`
 - `GET /v1/explore/simulated`
+- `GET /v1/explore/simulated?size=small,medium&amenities=Wi-Fi&price_levels=2&price_range=50-100`
 - `POST /v1/analytics/events`
 - `GET /openapi.json`
 - `GET /docs`

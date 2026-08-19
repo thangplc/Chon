@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ExplorePlace } from "../domain/explore";
@@ -105,6 +112,27 @@ vi.mock("./explore-map", () => ({
   ),
 }));
 
+const exploreApiDataset = (() => {
+  const placeIds = new Map(
+    exploreTestDataset.places.map((place, index) => [
+      place.id,
+      `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    ]),
+  );
+
+  return {
+    ...exploreTestDataset,
+    places: exploreTestDataset.places.map((place) => ({
+      ...place,
+      id: placeIds.get(place.id)!,
+    })),
+    reports: exploreTestDataset.reports.map((report) => ({
+      ...report,
+      placeId: placeIds.get(report.placeId)!,
+    })),
+  };
+})();
+
 const originalScrollIntoView = Element.prototype.scrollIntoView;
 
 afterEach(() => {
@@ -156,7 +184,7 @@ describe("ExploreExperience", () => {
     expect(screen.getByText("Bản đồ chưa được cấu hình")).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Bản đồ các địa điểm" }).parentElement,
-    ).toHaveClass("self-start", "lg:sticky", "lg:top-4");
+    ).toHaveClass("self-start", "chon-desktop-map-sticky");
   });
 
   it("hydrates shareable filters from the URL", async () => {
@@ -237,7 +265,12 @@ describe("ExploreExperience", () => {
     expect(within(results).queryByText("Góc Test 01")).not.toBeInTheDocument();
   });
 
-  it("filters metadata and clears all metadata filters", () => {
+  it("keeps metadata changes pending until apply and clears them on apply", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ data: exploreApiDataset }),
+      ok: true,
+    });
+    vi.stubGlobal("fetch", fetchMock);
     render(
       <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
     );
@@ -246,17 +279,39 @@ describe("ExploreExperience", () => {
     fireEvent.click(screen.getByLabelText("Quy mô Nhỏ"));
 
     expect(
-      screen.getByRole("region", { name: "1 Chốn để thử" }),
+      screen.getByRole("region", { name: "3 Chốn để thử" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("1 đang chọn")).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng bộ lọc" }));
+    expect(
+      await screen.findByRole("region", { name: "1 Chốn để thử" }),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/explore/simulated?size=small",
+      { cache: "no-store" },
+    );
     expect(screen.getByText("1 đang áp dụng")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Xóa bộ lọc" }));
     expect(
-      screen.getByRole("region", { name: "3 Chốn để thử" }),
+      screen.getByRole("region", { name: "1 Chốn để thử" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Đã thay đổi")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng bộ lọc" }));
+    expect(
+      await screen.findByRole("region", { name: "3 Chốn để thử" }),
     ).toBeInTheDocument();
   });
 
-  it("applies amenity filters with AND semantics and supports price levels", () => {
+  it("applies amenity filters with AND semantics and supports price levels", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ data: exploreApiDataset }),
+      ok: true,
+    });
+    vi.stubGlobal("fetch", fetchMock);
     const { unmount } = render(
       <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
     );
@@ -265,7 +320,13 @@ describe("ExploreExperience", () => {
     fireEvent.click(screen.getByLabelText("Tiện ích Wi-Fi"));
     fireEvent.click(screen.getByLabelText("Tiện ích Điều hòa"));
 
-    const amenityResults = screen.getByRole("region", {
+    expect(
+      screen.getByRole("region", { name: "3 Chốn để thử" }),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng bộ lọc" }));
+
+    const amenityResults = await screen.findByRole("region", {
       name: "1 Chốn để thử",
     });
     expect(
@@ -282,8 +343,9 @@ describe("ExploreExperience", () => {
     );
     fireEvent.click(screen.getByText("Bộ lọc quy mô, tiện ích và giá"));
     fireEvent.click(screen.getByLabelText("Phân khúc giá 3 Khá"));
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng bộ lọc" }));
     expect(
-      screen.getByRole("region", { name: "1 Chốn để thử" }),
+      await screen.findByRole("region", { name: "1 Chốn để thử" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Đèn Test 03")).toBeInTheDocument();
   });
@@ -364,7 +426,7 @@ describe("ExploreExperience", () => {
     );
   });
 
-  it("supports keyboard focus and exposes selection without relying on color", () => {
+  it("supports keyboard focus and exposes selection without relying on color", async () => {
     render(
       <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
     );
@@ -382,19 +444,110 @@ describe("ExploreExperience", () => {
     const selectedPlaceCard = screen.getByRole("complementary", {
       name: "Địa điểm đang chọn: Góc Test 01",
     });
+    expect(selectedPlaceCard).toHaveClass("chon-desktop-selection");
+    const results = screen.getByRole("region", { name: "3 Chốn để thử" });
     expect(
-      within(selectedPlaceCard).getByRole("link", { name: "Mở chi tiết" }),
-    ).toHaveAttribute("href", "/places/goc-test-01");
-    fireEvent.click(
-      within(selectedPlaceCard).getByRole("button", {
-        name: "Bỏ chọn Góc Test 01",
-      }),
+      within(results).getByRole("link", { name: "Xem chi tiết" }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("/places/goc-test-01?purpose=work"),
     );
     expect(
-      screen.queryByRole("complementary", {
+      within(results).getByRole("button", { name: "Góp vibe" }),
+    ).toBeInTheDocument();
+    expect(
+      within(selectedPlaceCard).getByRole("link", { name: "Mở chi tiết" }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("/places/goc-test-01?purpose=work"),
+    );
+    fireEvent.click(
+      within(selectedPlaceCard).getByRole("button", {
+        name: "Đóng thẻ Góc Test 01",
+      }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("complementary", {
+          name: "Địa điểm đang chọn: Góc Test 01",
+        }),
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("button", { name: "Mở thẻ Góc Test 01" }),
+    ).toBeInTheDocument();
+    expect(firstPlace).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Mở thẻ Góc Test 01" }));
+    expect(
+      screen.getByRole("complementary", {
         name: "Địa điểm đang chọn: Góc Test 01",
       }),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
+  });
+
+  it("opens the quick contribution modal from the selected place card", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ data: {} }), { status: 200 }),
+        ),
+    );
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Góc Test 01/ }));
+    fireEvent.click(
+      within(
+        screen.getByRole("complementary", {
+          name: "Địa điểm đang chọn: Góc Test 01",
+        }),
+      ).getByRole("button", { name: /Góp vibe/ }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /Bạn ghé Chốn này khi nào/,
+      }),
+    ).toBeInTheDocument();
+    expect(window.location.search).toContain("contribute=1");
+    expect(window.location.search).toContain("place=goc-test-01");
+
+    fireEvent.click(screen.getByRole("button", { name: "Đóng góp vibe" }));
+    expect(window.location.search).not.toContain("contribute=1");
+  });
+
+  it("restores the quick contribution modal after an OAuth callback", async () => {
+    window.history.replaceState(null, "", "/?contribute=1&place=goc-test-01");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ data: {} }), { status: 200 }),
+        ),
+    );
+
+    render(
+      <ExploreExperience dataset={exploreTestDataset} mapStyleUrl={null} />,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /Bạn ghé Chốn này khi nào/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "3 Chốn để thử" })).getByRole(
+        "button",
+        { name: /Góc Test 01/ },
+      ),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(window.location.search).toContain("contribute=1");
+    expect(window.location.search).toContain("place=goc-test-01");
   });
 
   it("shows an honest no-vibe state when the selected time has no reports", () => {

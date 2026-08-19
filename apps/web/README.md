@@ -88,6 +88,11 @@ Explore đồng bộ bộ lọc vào URL và có nút `Chia sẻ bộ lọc`. An
 anonymous session ID, chỉ gửi context đã chuẩn hóa qua same-origin
 `/api/analytics/events`; không gửi tọa độ hoặc raw report text.
 
+Bộ lọc quy mô, tiện ích và giá chỉ là trạng thái đang chọn cho đến khi người
+dùng bấm `Áp dụng bộ lọc`. Khi xác nhận, browser gọi same-origin
+`/api/explore/simulated`; Next.js proxy chuyển tiếp truy vấn metadata tới NestJS
+để lấy dataset mới, sau đó Explore cập nhật ranking và URL canonical.
+
 Auth.js Google OAuth dùng các route `/api/auth/*`. `AUTH_API_SECRET` là secret
 server-only phải trùng với API để proxy `/api/auth/me` tạo assertion ngắn hạn;
 không dùng prefix `NEXT_PUBLIC_` cho secret này. Xem callback URL và security

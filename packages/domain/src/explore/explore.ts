@@ -31,6 +31,7 @@ const dimensions: readonly VibeDimension[] = [
 
 export { purposePreferences } from "./purpose-preferences";
 export { explainPurposeMatch } from "./explanation";
+export type { ExploreExplanation } from "./explanation";
 
 export type ExplorePlace = ExploreSourcePlace &
   Readonly<{
@@ -187,7 +188,10 @@ export function getExploreTimeContext(
   };
 }
 
-function calculateMatchScore(vibe: VibeScores, purpose: PurposeId): number {
+export function calculateMatchScore(
+  vibe: VibeScores,
+  purpose: PurposeId,
+): number {
   const preference = purposePreferences[purpose];
   const totalWeight = dimensions.reduce(
     (total, dimension) => total + preference.weights[dimension],

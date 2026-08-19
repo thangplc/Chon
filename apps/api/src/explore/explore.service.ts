@@ -27,6 +27,11 @@ import {
   resolvePlaceMetadata,
   type SyntheticPlaceMetadata,
 } from "../places/place-metadata-resolver";
+import {
+  emptyExploreDatasetQuery,
+  matchesExploreMetadataQuery,
+  type ExploreDatasetQuery,
+} from "./explore-query";
 
 const simulatedEnvironments = new Set(["local", "ci", "staging"]);
 
@@ -60,6 +65,7 @@ export class ExploreService {
     environment: ApiEnvironment["DATA_IMPORT_TARGET_ENVIRONMENT"],
     placeDataMode: ApiEnvironment["EXPLORE_PLACE_DATA_MODE"],
     metadataMode: ApiEnvironment["EXPLORE_PLACE_METADATA_MODE"] = "real",
+    query: ExploreDatasetQuery = emptyExploreDatasetQuery,
   ): Promise<ExploreDataset> {
     if (!simulatedEnvironments.has(environment)) {
       throw new NotFoundException();
@@ -234,10 +240,17 @@ export class ExploreService {
       },
     );
 
+    const filteredPlaces = mappedPlaces.filter((place) =>
+      matchesExploreMetadataQuery(place, query),
+    );
+    const filteredPlaceIds = new Set(filteredPlaces.map(({ id }) => id));
+
     return {
-      places: mappedPlaces,
-      reports: mappedReports,
-      vibes,
+      places: filteredPlaces,
+      reports: mappedReports.filter(({ placeId }) =>
+        filteredPlaceIds.has(placeId),
+      ),
+      vibes: vibes.filter(({ placeId }) => filteredPlaceIds.has(placeId)),
       source:
         placeDataMode === "real"
           ? "database_real"
