@@ -24,6 +24,12 @@ export const vibeReportDimensionSchema = z.enum([
 
 export type VibeReportDimension = z.infer<typeof vibeReportDimensionSchema>;
 
+export const vibeReportEvidenceModeSchema = z.enum(["on_site", "recalled"]);
+
+export type VibeReportEvidenceMode = z.infer<
+  typeof vibeReportEvidenceModeSchema
+>;
+
 export const locationEvidenceSchema = z
   .object({
     accuracyMeters: z.number().finite().min(0).max(5_000),
@@ -66,10 +72,20 @@ export const communityVibeReportInputSchema = z
       .optional(),
     scores: scoresSchema,
     shortNote: z.string().trim().min(1).max(140).optional(),
+    visitEvidenceMode: vibeReportEvidenceModeSchema,
     visitMode: vibeReportVisitModeSchema,
     visitedAt: z.string().datetime({ offset: true }),
   })
-  .strict();
+  .strict()
+  .superRefine((report, context) => {
+    if (report.visitEvidenceMode === "recalled" && report.locationEvidence) {
+      context.addIssue({
+        code: "custom",
+        message: "Recalled visits cannot include current location evidence",
+        path: ["locationEvidence"],
+      });
+    }
+  });
 
 export type CommunityVibeReportInput = z.infer<
   typeof communityVibeReportInputSchema
@@ -78,8 +94,13 @@ export type CommunityVibeReportInput = z.infer<
 export const vibeReportSubmissionResponseSchema = z.object({
   data: z.object({
     id: z.string().uuid(),
-    locationVerification: z.enum(["none", "approximate", "verified"]),
-    moderationStatus: z.literal("pending"),
+    locationVerification: z.enum([
+      "none",
+      "recalled",
+      "approximate",
+      "verified",
+    ]),
+    moderationStatus: z.literal("approved"),
     placeId: z.string().uuid(),
     submittedAt: z.coerce.date(),
   }),

@@ -26,6 +26,9 @@ describe("API environment", () => {
     expect(environment.AUTH_API_ISSUER).toBe("chon-web");
     expect(environment.AUTH_API_AUDIENCE).toBe("chon-api");
     expect(environment.AUTH_API_SECRET).toContain("dev-only");
+    expect(environment.VIBE_REPORT_LIMIT_10_MINUTES).toBe(3);
+    expect(environment.VIBE_REPORT_LIMIT_24_HOURS).toBe(10);
+    expect(environment.VIBE_REPORT_PLACE_COOLDOWN_MINUTES).toBe(360);
   });
 
   it("parses the real-place Explore rollout flag", () => {

@@ -60,8 +60,17 @@ describe("buildPlaceVibePresentation", () => {
       intent,
     );
 
-    expect(result.matchScore).toBeNull();
-    expect(result.scores).toBeNull();
-    expect(result.explanation.reasons).toEqual([]);
+    expect(result.matchScore).toBe(93);
+    expect(result.coverage).toBe(5);
+    expect(result.availableScores).toMatchObject({
+      crowd: 2,
+      privacy: 4,
+      workability: 5,
+    });
+    expect(result.availableScores).not.toHaveProperty("noise");
+    expect(result.explanation.reasons.length).toBeGreaterThan(0);
+    expect(result.explanation.cautions).toContain(
+      "Đánh giá tạm thời; còn thiếu mức ồn.",
+    );
   });
 });

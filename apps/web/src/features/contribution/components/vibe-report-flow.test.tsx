@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { VibeReportFlow } from "./vibe-report-flow";
 
+const refresh = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh }),
+}));
+
 const { signInMock } = vi.hoisted(() => ({ signInMock: vi.fn() }));
 
 vi.mock("next-auth/react", () => ({
@@ -11,6 +17,7 @@ vi.mock("next-auth/react", () => ({
 
 describe("VibeReportFlow", () => {
   beforeEach(() => {
+    refresh.mockReset();
     vi.restoreAllMocks();
     window.history.replaceState({}, "", "/places/goc-may-01");
     Object.defineProperty(navigator, "geolocation", {
@@ -34,7 +41,7 @@ describe("VibeReportFlow", () => {
     });
   });
 
-  it("walks through three steps and submits a pending report", async () => {
+  it("walks through three steps and publishes a report", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
@@ -46,7 +53,7 @@ describe("VibeReportFlow", () => {
             data: {
               id: "33333333-3333-4333-8333-333333333333",
               locationVerification: "none",
-              moderationStatus: "pending",
+              moderationStatus: "approved",
               placeId: "22222222-2222-4222-8222-222222222222",
               submittedAt: "2026-08-16T02:00:00.000Z",
             },
@@ -59,7 +66,9 @@ describe("VibeReportFlow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Góp vibe/ }));
     expect(
-      await screen.findByRole("heading", { name: /Bạn ghé Chốn này khi nào/ }),
+      await screen.findByRole("heading", {
+        name: /Bạn đang chia sẻ trải nghiệm nào/,
+      }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Xác minh vị trí" }));
@@ -75,6 +84,9 @@ describe("VibeReportFlow", () => {
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Khả năng làm việc: 5 trên 5" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mật độ người: 2 trên 5" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
     expect(
@@ -104,10 +116,12 @@ describe("VibeReportFlow", () => {
         latitude: 10.78,
         longitude: 106.7,
       },
-      scores: { noise: 1, privacy: 4, workability: 5 },
+      scores: { crowd: 2, noise: 1, privacy: 4, workability: 5 },
       shortNote: "Buổi sáng khá yên tĩnh.",
+      visitEvidenceMode: "on_site",
       visitMode: "work",
     });
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it("shows a login gate for guests", async () => {
@@ -139,7 +153,9 @@ describe("VibeReportFlow", () => {
     render(<VibeReportFlow placeName="Góc Mây 01" placeSlug="goc-may-01" />);
 
     expect(
-      await screen.findByRole("heading", { name: /Bạn ghé Chốn này khi nào/ }),
+      await screen.findByRole("heading", {
+        name: /Bạn đang chia sẻ trải nghiệm nào/,
+      }),
     ).toBeInTheDocument();
     expect(window.location.search).toBe("");
   });
@@ -158,5 +174,80 @@ describe("VibeReportFlow", () => {
     expect(
       screen.queryByText("Cần đăng nhập để góp vibe"),
     ).not.toBeInTheDocument();
+  });
+
+  it("submits a previous visit as recalled without requesting GPS", async () => {
+    const geolocation = navigator.geolocation.getCurrentPosition as ReturnType<
+      typeof vi.fn
+    >;
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: {} }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: {
+              id: "33333333-3333-4333-8333-333333333333",
+              locationVerification: "recalled",
+              moderationStatus: "approved",
+              placeId: "22222222-2222-4222-8222-222222222222",
+              submittedAt: "2026-08-16T02:00:00.000Z",
+            },
+          }),
+          { status: 201 },
+        ),
+      );
+
+    render(<VibeReportFlow placeName="Góc Mây 01" placeSlug="goc-may-01" />);
+    fireEvent.click(screen.getByRole("button", { name: /Góp vibe/ }));
+    await screen.findByRole("heading", {
+      name: /Bạn đang chia sẻ trải nghiệm nào/,
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Tôi đã ghé trước đó/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mức ồn: 1 trên 5" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Độ riêng tư: 4 trên 5" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Khả năng làm việc: 5 trên 5" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gửi góp vibe" }));
+
+    expect(
+      await screen.findByText("Đã ghi nhận trải nghiệm từ lần ghé trước."),
+    ).toBeInTheDocument();
+    expect(geolocation).not.toHaveBeenCalled();
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)),
+    ).toMatchObject({ visitEvidenceMode: "recalled" });
+  });
+
+  it("does not offer vibe questions to someone who has not visited", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: {} }), { status: 200 }),
+      );
+
+    render(<VibeReportFlow placeName="Góc Mây 01" placeSlug="goc-may-01" />);
+    fireEvent.click(screen.getByRole("button", { name: /Góp vibe/ }));
+    await screen.findByRole("heading", {
+      name: /Bạn đang chia sẻ trải nghiệm nào/,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Tôi chưa ghé/ }));
+
+    expect(
+      screen.getByText("Vibe cần dựa trên trải nghiệm thực tế"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tiếp tục" }),
+    ).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

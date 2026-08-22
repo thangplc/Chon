@@ -5,7 +5,7 @@ import { VibeSnapshotsService } from "./vibe-snapshots.service";
 import { VibeSnapshotBuilder } from "./vibe-snapshot-builder";
 
 @Module({
-  exports: [VibeSnapshotsService],
+  exports: [VibeSnapshotBuilder, VibeSnapshotsService],
   imports: [DatabaseModule],
   providers: [VibeSnapshotBuilder, VibeSnapshotsService],
 })

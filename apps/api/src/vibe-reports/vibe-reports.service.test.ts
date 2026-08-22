@@ -7,6 +7,7 @@ import {
   VibeReportValidationError,
   VibeReportsService,
 } from "./vibe-reports.service";
+import { VibeReportAbuseService } from "./vibe-report-abuse.service";
 
 const user = {
   avatarUrl: null,
@@ -22,16 +23,26 @@ function createService(options?: {
   isSimulated?: boolean;
   environment?: string;
 }) {
-  const limit = vi.fn().mockResolvedValue([
+  const placeLimit = vi.fn().mockResolvedValue([
     {
       distanceMeters: options?.distanceMeters ?? null,
       id: "22222222-2222-4222-8222-222222222222",
       isSimulated: options?.isSimulated ?? false,
     },
   ]);
-  const where = vi.fn(() => ({ limit }));
-  const from = vi.fn(() => ({ where }));
-  const select = vi.fn(() => ({ from }));
+  const recentLimit = vi.fn().mockResolvedValue([]);
+  const select = vi
+    .fn()
+    .mockImplementationOnce(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({ limit: placeLimit })),
+      })),
+    }))
+    .mockImplementation(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({ limit: recentLimit })),
+      })),
+    }));
   const returning = vi.fn().mockResolvedValue([
     {
       id: "33333333-3333-4333-8333-333333333333",
@@ -44,20 +55,36 @@ function createService(options?: {
     return { returning };
   });
   const insert = vi.fn(() => ({ values }));
-  const db = { insert, select } as unknown as ChonDatabase;
+  const execute = vi.fn().mockResolvedValue(undefined);
+  const transaction = vi.fn(async (callback: (tx: unknown) => unknown) =>
+    callback({ execute, insert, select }),
+  );
+  const db = { insert, select, transaction } as unknown as ChonDatabase;
   const config = {
     get: vi.fn((key: keyof ApiEnvironment) => {
       if (key === "DATA_IMPORT_TARGET_ENVIRONMENT") {
         return options?.environment ?? "local";
       }
+      if (key === "VIBE_REPORT_LIMIT_10_MINUTES") return 3;
+      if (key === "VIBE_REPORT_LIMIT_24_HOURS") return 10;
+      if (key === "VIBE_REPORT_PLACE_COOLDOWN_MINUTES") return 360;
       return undefined;
     }),
   };
+  const rebuildForPlace = vi.fn().mockResolvedValue(1);
 
   return {
     db,
     insert,
-    service: new VibeReportsService(config as never, db),
+    rebuildForPlace,
+    service: new VibeReportsService(
+      config as never,
+      db,
+      {
+        rebuildForPlace,
+      } as never,
+      new VibeReportAbuseService(),
+    ),
     values,
   };
 }
@@ -70,8 +97,8 @@ describe("VibeReportsService", () => {
     expect(determineLocationVerification(null, undefined)).toBe("none");
   });
 
-  it("creates a pending community report with server-owned provenance", async () => {
-    const { insert, service, values } = createService();
+  it("publishes a valid community report and refreshes its snapshot", async () => {
+    const { insert, rebuildForPlace, service, values } = createService();
 
     await expect(
       service.createForPlaceSlug(
@@ -79,6 +106,7 @@ describe("VibeReportsService", () => {
         {
           scores: { noise: 1, privacy: 4, workability: 5 },
           shortNote: "Buổi sáng khá yên tĩnh.",
+          visitEvidenceMode: "on_site",
           visitMode: "work",
           visitedAt: new Date(Date.now() - 60_000).toISOString(),
         },
@@ -86,7 +114,7 @@ describe("VibeReportsService", () => {
       ),
     ).resolves.toMatchObject({
       id: "33333333-3333-4333-8333-333333333333",
-      moderationStatus: "pending",
+      moderationStatus: "approved",
       placeId: "22222222-2222-4222-8222-222222222222",
     });
 
@@ -96,9 +124,13 @@ describe("VibeReportsService", () => {
         dataType: "community",
         isSimulated: false,
         locationVerification: "none",
-        moderationStatus: "pending",
+        moderationStatus: "approved",
         userId: user.id,
       }),
+    );
+    expect(rebuildForPlace).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+      "local",
     );
   });
 
@@ -116,6 +148,7 @@ describe("VibeReportsService", () => {
             longitude: 106.7,
           },
           scores: { noise: 1, privacy: 4, workability: 5 },
+          visitEvidenceMode: "on_site",
           visitMode: "work",
           visitedAt: new Date(Date.now() - 60_000).toISOString(),
         },
@@ -137,6 +170,7 @@ describe("VibeReportsService", () => {
         "goc-may-01",
         {
           scores: { noise: 1, privacy: 4 },
+          visitEvidenceMode: "on_site",
           visitMode: "work",
           visitedAt: "2026-08-16T02:00:00.000Z",
         },
@@ -149,6 +183,7 @@ describe("VibeReportsService", () => {
         "goc-may-01",
         {
           scores: { noise: 1, privacy: 4, workability: 5 },
+          visitEvidenceMode: "on_site",
           visitMode: "work",
           visitedAt: "2099-08-16T02:00:00.000Z",
         },
@@ -170,11 +205,33 @@ describe("VibeReportsService", () => {
         "fixture-place",
         {
           scores: { noise: 1, privacy: 4, workability: 5 },
+          visitEvidenceMode: "on_site",
           visitMode: "work",
           visitedAt: "2026-08-16T02:00:00.000Z",
         },
         user,
       ),
     ).rejects.toThrow("Place is not publicly available");
+  });
+
+  it("stores recalled visits without using current location evidence", async () => {
+    const { service, values } = createService({ distanceMeters: 20 });
+
+    await expect(
+      service.createForPlaceSlug(
+        "goc-may-01",
+        {
+          scores: { noise: 1, privacy: 4, workability: 5 },
+          visitEvidenceMode: "recalled",
+          visitMode: "work",
+          visitedAt: new Date(Date.now() - 86_400_000).toISOString(),
+        },
+        user,
+      ),
+    ).resolves.toMatchObject({ locationVerification: "recalled" });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({ locationVerification: "recalled" }),
+    );
   });
 });

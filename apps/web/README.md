@@ -93,6 +93,10 @@ dùng bấm `Áp dụng bộ lọc`. Khi xác nhận, browser gọi same-origin
 `/api/explore/simulated`; Next.js proxy chuyển tiếp truy vấn metadata tới NestJS
 để lấy dataset mới, sau đó Explore cập nhật ranking và URL canonical.
 
+Selector khu vực đọc động từ `GET /v1/explore/service-areas`. Explore lọc POI
+theo `place_service_areas` primary và dùng boundary bounds để fit bản đồ; không
+còn allowlist Quận 1, Quận 3 và Bình Thạnh trong source code.
+
 Auth.js Google OAuth dùng các route `/api/auth/*`. `AUTH_API_SECRET` là secret
 server-only phải trùng với API để proxy `/api/auth/me` tạo assertion ngắn hạn;
 không dùng prefix `NEXT_PUBLIC_` cho secret này. Xem callback URL và security

@@ -18,7 +18,7 @@ const timeBucketSchema = z.enum([
   "evening",
   "late",
 ]);
-const districtSchema = z.enum(["Quận 1", "Quận 3", "Bình Thạnh"]);
+const districtSchema = z.string().min(1).max(64);
 const priceRangeSchema = z.enum([
   "any",
   "under-50",

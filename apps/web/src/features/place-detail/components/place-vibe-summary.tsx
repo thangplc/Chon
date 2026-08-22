@@ -79,6 +79,9 @@ export function PlaceVibeSummary({
   presentation: PlaceVibePresentation;
 }>) {
   const snapshot = presentation.snapshot;
+  const availableDimensions = dimensions.filter(
+    (dimension) => presentation.availableScores[dimension] !== undefined,
+  );
 
   return (
     <div className="space-y-6">
@@ -95,6 +98,9 @@ export function PlaceVibeSummary({
             : "Chưa có độ tin cậy"}
         </strong>
         <span>{evidenceLabel(presentation)}</span>
+        {snapshot && presentation.coverage < dimensions.length && (
+          <span>{`${presentation.coverage}/6 chiều · đánh giá tạm thời`}</span>
+        )}
       </div>
 
       <section aria-labelledby="place-fit-reasons-title">
@@ -139,10 +145,10 @@ export function PlaceVibeSummary({
           </span>
         </div>
 
-        {presentation.scores ? (
+        {availableDimensions.length > 0 ? (
           <dl className="mt-4 grid gap-3">
-            {dimensions.map((dimension) => {
-              const score = presentation.scores?.[dimension];
+            {availableDimensions.map((dimension) => {
+              const score = presentation.availableScores[dimension];
               if (score === undefined) return null;
               return (
                 <div

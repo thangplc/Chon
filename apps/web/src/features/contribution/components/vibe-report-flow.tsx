@@ -3,9 +3,11 @@
 import type {
   CommunityVibeReportInput,
   VibeReportDimension,
+  VibeReportEvidenceMode,
   VibeReportVisitMode,
 } from "@chon/contracts/vibe-report";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { submitCommunityVibeReport } from "../data/vibe-report-repository";
@@ -24,6 +26,29 @@ type Step = 1 | 2 | 3;
 type ScoreMap = Partial<Record<VibeReportDimension, number>>;
 type SeatAvailability = "easy" | "normal" | "difficult" | "unknown";
 type LocationState = "idle" | "requesting" | "ready" | "denied" | "unavailable";
+type ContributionExperience = VibeReportEvidenceMode | "not_visited";
+
+const experienceOptions: readonly Readonly<{
+  description: string;
+  id: ContributionExperience;
+  label: string;
+}>[] = [
+  {
+    description: "Có thể xác minh GPS nếu bạn chủ động cho phép.",
+    id: "on_site",
+    label: "Tôi đang ở đây",
+  },
+  {
+    description: "Chọn lại ngày và khung giờ của lần ghé gần nhất.",
+    id: "recalled",
+    label: "Tôi đã ghé trước đó",
+  },
+  {
+    description: "Không tạo report trải nghiệm; chuyển sang góp ý thông tin.",
+    id: "not_visited",
+    label: "Tôi chưa ghé",
+  },
+];
 
 const visitModeOptions: readonly Readonly<{
   id: VibeReportVisitMode;
@@ -51,6 +76,15 @@ const dimensionsByVisitMode: Readonly<
   study: ["noise", "lighting", "workability"],
   work: ["noise", "privacy", "workability"],
 };
+
+const allDimensions: readonly VibeReportDimension[] = [
+  "noise",
+  "crowd",
+  "lighting",
+  "privacy",
+  "workability",
+  "socialEnergy",
+];
 
 const dimensionCopy: Readonly<
   Record<
@@ -107,12 +141,15 @@ export function VibeReportFlow({
   placeSlug,
   triggerClassName,
 }: VibeReportFlowProps) {
+  const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = open !== undefined;
   const isOpen = open ?? internalOpen;
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [authCheckAttempt, setAuthCheckAttempt] = useState(0);
   const [step, setStep] = useState<Step>(1);
+  const [experience, setExperience] =
+    useState<ContributionExperience>("on_site");
   const [visitMode, setVisitMode] = useState<VibeReportVisitMode>("work");
   const [visitedDate, setVisitedDate] = useState(getTodayDateValue);
   const [visitedTime, setVisitedTime] = useState("09:00");
@@ -124,7 +161,7 @@ export function VibeReportFlow({
   const [locationEvidence, setLocationEvidence] =
     useState<CommunityVibeReportInput["locationEvidence"]>();
   const [locationResult, setLocationResult] = useState<
-    "none" | "approximate" | "verified" | null
+    "none" | "recalled" | "approximate" | "verified" | null
   >(null);
   const [submitState, setSubmitState] = useState<
     "idle" | "submitting" | "success"
@@ -133,10 +170,14 @@ export function VibeReportFlow({
   const [error, setError] = useState<string | null>(null);
 
   const requiredDimensions = dimensionsByVisitMode[visitMode];
+  const optionalDimensions = allDimensions.filter(
+    (dimension) => !requiredDimensions.includes(dimension),
+  );
   const answeredRequiredDimensions = requiredDimensions.filter(
     (dimension) => scores[dimension] !== undefined,
   ).length;
-  const canContinueFromContext = Boolean(visitedDate && visitedTime);
+  const canContinueFromContext =
+    experience !== "not_visited" && Boolean(visitedDate && visitedTime);
   const canContinueFromQuestions =
     answeredRequiredDimensions === requiredDimensions.length;
 
@@ -207,6 +248,7 @@ export function VibeReportFlow({
   const closeFlow = useCallback(() => {
     setFlowOpen(false);
     setStep(1);
+    setExperience("on_site");
     setSubmitState("idle");
     setLocationEvidence(undefined);
     setLocationResult(null);
@@ -243,6 +285,14 @@ export function VibeReportFlow({
     setError(null);
   }
 
+  function selectExperience(nextExperience: ContributionExperience) {
+    setExperience(nextExperience);
+    setLocationEvidence(undefined);
+    setLocationResult(null);
+    setLocationState("idle");
+    setError(null);
+  }
+
   function requestLocationVerification() {
     if (!("geolocation" in navigator)) {
       setLocationState("unavailable");
@@ -273,6 +323,7 @@ export function VibeReportFlow({
   }
 
   async function submitReport() {
+    if (experience === "not_visited") return;
     setSubmitState("submitting");
     setError(null);
     const input: CommunityVibeReportInput = {
@@ -280,6 +331,7 @@ export function VibeReportFlow({
       scores,
       seatAvailability,
       shortNote: shortNote.trim() || undefined,
+      visitEvidenceMode: experience,
       visitMode,
       visitedAt: new Date(
         `${visitedDate}T${visitedTime}:00+07:00`,
@@ -290,6 +342,7 @@ export function VibeReportFlow({
       const response = await submitCommunityVibeReport(placeSlug, input);
       setLocationResult(response.data.locationVerification);
       setSubmitState("success");
+      router.refresh();
     } catch (submitError) {
       setSubmitState("idle");
       setError(
@@ -340,8 +393,8 @@ export function VibeReportFlow({
                   className="mt-2 text-sm leading-6 text-[#756c63]"
                   id="vibe-report-description"
                 >
-                  {callbackDescription}. Chốn sẽ hiển thị report sau khi được
-                  duyệt.
+                  {callbackDescription}. Report hợp lệ sẽ được cập nhật lên Chốn
+                  ngay sau khi gửi.
                 </p>
               </div>
               <button
@@ -365,7 +418,7 @@ export function VibeReportFlow({
                 <p className="text-base font-bold">Cần đăng nhập để góp vibe</p>
                 <p className="mt-2 text-sm leading-6 text-[#756c63]">
                   Bạn có thể xem Explore công khai, nhưng report community cần
-                  gắn với identity để được kiểm duyệt.
+                  gắn với identity để bảo đảm trách nhiệm đóng góp.
                 </p>
                 <button
                   className="mt-5 inline-flex rounded-xl bg-[#c96040] px-5 py-3 text-sm font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
@@ -414,15 +467,17 @@ export function VibeReportFlow({
                 </div>
                 <h3 className="mt-4 text-xl font-bold">Đã nhận góp vibe</h3>
                 <p className="mt-2 text-sm leading-6 text-[#756c63]">
-                  Report đang chờ duyệt. Điểm vibe trên Explore sẽ chỉ cập nhật
-                  sau khi report được kiểm tra.
+                  Vibe đã được cập nhật vào dữ liệu của địa điểm và có thể được
+                  dùng trên Explore.
                 </p>
                 <p className="mt-3 rounded-xl bg-[#f7f2eb] px-3 py-2 text-sm font-semibold text-[#42645a]">
                   {locationResult === "verified"
                     ? "✓ Đã xác minh bạn ở gần địa điểm."
                     : locationResult === "approximate"
                       ? "Vị trí tương đối gần địa điểm."
-                      : "Report chưa có xác minh vị trí."}
+                      : locationResult === "recalled"
+                        ? "Đã ghi nhận trải nghiệm từ lần ghé trước."
+                        : "Report chưa có xác minh vị trí."}
                 </p>
                 <button
                   className="mt-5 rounded-xl bg-[#c96040] px-5 py-3 text-sm font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
@@ -455,123 +510,173 @@ export function VibeReportFlow({
                   >
                     <div>
                       <h3 className="text-lg font-bold" id="vibe-context-title">
-                        1. Bạn ghé Chốn này khi nào?
+                        1. Bạn đang chia sẻ trải nghiệm nào?
                       </h3>
                       <p className="mt-1 text-sm text-[#756c63]">
-                        Chọn thời điểm gần nhất bạn đã trải nghiệm địa điểm.
+                        Chốn chỉ dùng vibe từ người đã thực sự ghé địa điểm.
                       </p>
                     </div>
-                    <label
-                      className="block text-sm font-bold"
-                      htmlFor="vibe-visit-mode"
-                    >
-                      Mục đích ghé
-                      <select
-                        id="vibe-visit-mode"
-                        className="mt-2 w-full rounded-xl border border-[#c96040]/15 bg-white px-3 py-3 font-normal focus:border-[#c96040] focus:outline-none"
-                        onChange={(event) =>
-                          setVisitMode(
-                            event.target.value as VibeReportVisitMode,
-                          )
-                        }
-                        value={visitMode}
-                      >
-                        {visitModeOptions.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.label}
-                          </option>
+                    <fieldset>
+                      <legend className="text-sm font-bold">
+                        Loại trải nghiệm
+                      </legend>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                        {experienceOptions.map((option) => (
+                          <button
+                            aria-pressed={experience === option.id}
+                            className={`rounded-2xl border p-3 text-left transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] ${experience === option.id ? "border-[#c96040] bg-[#f5ddd3]" : "border-[#c96040]/15 bg-white hover:border-[#c96040]/45"}`}
+                            key={option.id}
+                            onClick={() => selectExperience(option.id)}
+                            type="button"
+                          >
+                            <span className="block text-sm font-bold">
+                              {option.label}
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-[#756c63]">
+                              {option.description}
+                            </span>
+                          </button>
                         ))}
-                      </select>
-                    </label>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <label
-                        className="block text-sm font-bold"
-                        htmlFor="vibe-visited-date"
-                      >
-                        Ngày đã ghé
-                        <input
-                          id="vibe-visited-date"
-                          className="mt-2 w-full rounded-xl border border-[#c96040]/15 bg-white px-3 py-3 font-normal focus:border-[#c96040] focus:outline-none"
-                          max={getTodayDateValue()}
-                          onChange={(event) =>
-                            setVisitedDate(event.target.value)
-                          }
-                          type="date"
-                          value={visitedDate}
-                        />
-                      </label>
-                      <label
-                        className="block text-sm font-bold"
-                        htmlFor="vibe-visited-time"
-                      >
-                        Khoảng giờ
-                        <input
-                          id="vibe-visited-time"
-                          className="mt-2 w-full rounded-xl border border-[#c96040]/15 bg-white px-3 py-3 font-normal focus:border-[#c96040] focus:outline-none"
-                          onChange={(event) =>
-                            setVisitedTime(event.target.value)
-                          }
-                          type="time"
-                          value={visitedTime}
-                        />
-                      </label>
-                    </div>
-                    <div className="rounded-2xl border border-[#c96040]/15 bg-white p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-bold">
-                            Xác minh bạn đang ở gần đây
-                          </p>
-                          <p className="mt-1 text-xs leading-5 text-[#756c63]">
-                            Chỉ truy cập vị trí một lần khi bạn chủ động bấm.
-                            Chốn chỉ lưu mức xác minh, không lưu tọa độ của bạn.
-                            Phù hợp khi bạn đang ở quán hoặc vừa ghé.
-                          </p>
-                        </div>
-                        {locationState === "ready" && (
-                          <span className="shrink-0 rounded-full bg-[#dceade] px-2.5 py-1 text-xs font-bold text-[#286146]">
-                            Đã lấy vị trí
-                          </span>
-                        )}
                       </div>
-                      <button
-                        className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-[#c96040]/35 px-4 text-sm font-bold text-[#963f2a] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] disabled:cursor-wait disabled:opacity-60"
-                        disabled={locationState === "requesting"}
-                        onClick={requestLocationVerification}
-                        type="button"
-                      >
-                        {locationState === "requesting"
-                          ? "Đang xác định vị trí…"
-                          : locationState === "ready"
-                            ? "Xác minh lại vị trí"
-                            : "Xác minh vị trí"}
-                      </button>
-                      {locationState === "denied" && (
-                        <p
-                          className="mt-2 text-xs text-[#963f2a]"
-                          role="status"
-                        >
-                          Bạn đã từ chối quyền vị trí. Vẫn có thể gửi report mà
-                          không xác minh.
+                    </fieldset>
+                    {experience === "not_visited" && (
+                      <div className="rounded-2xl border border-[#c96040]/20 bg-white p-5">
+                        <h4 className="font-bold text-[#963f2a]">
+                          Vibe cần dựa trên trải nghiệm thực tế
+                        </h4>
+                        <p className="mt-2 text-sm leading-6 text-[#756c63]">
+                          Chốn sẽ không tạo vibe report cho lựa chọn này để
+                          tránh làm sai lệch xếp hạng. Flow gửi đề xuất thông
+                          tin địa điểm sẽ được bổ sung ở task kế tiếp.
                         </p>
-                      )}
-                      {locationState === "unavailable" && (
-                        <p
-                          className="mt-2 text-xs text-[#963f2a]"
-                          role="status"
+                      </div>
+                    )}
+                    {experience !== "not_visited" && (
+                      <>
+                        <label
+                          className="block text-sm font-bold"
+                          htmlFor="vibe-visit-mode"
                         >
-                          Chưa thể lấy vị trí. Vẫn có thể tiếp tục góp vibe.
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      className="w-full rounded-xl bg-[#c96040] px-4 py-3 font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] disabled:cursor-not-allowed disabled:opacity-40"
-                      disabled={!canContinueFromContext}
-                      onClick={() => setStep(2)}
-                      type="button"
-                    >
-                      Tiếp tục
-                    </button>
+                          Mục đích ghé
+                          <select
+                            id="vibe-visit-mode"
+                            className="mt-2 w-full rounded-xl border border-[#c96040]/15 bg-white px-3 py-3 font-normal focus:border-[#c96040] focus:outline-none"
+                            onChange={(event) =>
+                              setVisitMode(
+                                event.target.value as VibeReportVisitMode,
+                              )
+                            }
+                            value={visitMode}
+                          >
+                            {visitModeOptions.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <label
+                            className="block text-sm font-bold"
+                            htmlFor="vibe-visited-date"
+                          >
+                            Ngày đã ghé
+                            <input
+                              id="vibe-visited-date"
+                              className="mt-2 w-full rounded-xl border border-[#c96040]/15 bg-white px-3 py-3 font-normal focus:border-[#c96040] focus:outline-none"
+                              max={getTodayDateValue()}
+                              onChange={(event) =>
+                                setVisitedDate(event.target.value)
+                              }
+                              type="date"
+                              value={visitedDate}
+                            />
+                          </label>
+                          <label
+                            className="block text-sm font-bold"
+                            htmlFor="vibe-visited-time"
+                          >
+                            Khoảng giờ
+                            <input
+                              id="vibe-visited-time"
+                              className="mt-2 w-full rounded-xl border border-[#c96040]/15 bg-white px-3 py-3 font-normal focus:border-[#c96040] focus:outline-none"
+                              onChange={(event) =>
+                                setVisitedTime(event.target.value)
+                              }
+                              type="time"
+                              value={visitedTime}
+                            />
+                          </label>
+                        </div>
+                        {experience === "recalled" && (
+                          <p className="rounded-2xl bg-[#fff4df] p-4 text-sm leading-6 text-[#8b551f]">
+                            Đây là trải nghiệm bạn nhớ lại. Ngày và khoảng giờ
+                            đã ghé là bắt buộc; GPS hiện tại sẽ không được sử
+                            dụng.
+                          </p>
+                        )}
+                        {experience === "on_site" && (
+                          <div className="rounded-2xl border border-[#c96040]/15 bg-white p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-sm font-bold">
+                                  Xác minh bạn đang ở gần đây
+                                </p>
+                                <p className="mt-1 text-xs leading-5 text-[#756c63]">
+                                  Chỉ truy cập vị trí một lần khi bạn chủ động
+                                  bấm. Chốn chỉ lưu mức xác minh, không lưu tọa
+                                  độ của bạn. Phù hợp khi bạn đang ở quán hoặc
+                                  vừa ghé.
+                                </p>
+                              </div>
+                              {locationState === "ready" && (
+                                <span className="shrink-0 rounded-full bg-[#dceade] px-2.5 py-1 text-xs font-bold text-[#286146]">
+                                  Đã lấy vị trí
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-[#c96040]/35 px-4 text-sm font-bold text-[#963f2a] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] disabled:cursor-wait disabled:opacity-60"
+                              disabled={locationState === "requesting"}
+                              onClick={requestLocationVerification}
+                              type="button"
+                            >
+                              {locationState === "requesting"
+                                ? "Đang xác định vị trí…"
+                                : locationState === "ready"
+                                  ? "Xác minh lại vị trí"
+                                  : "Xác minh vị trí"}
+                            </button>
+                            {locationState === "denied" && (
+                              <p
+                                className="mt-2 text-xs text-[#963f2a]"
+                                role="status"
+                              >
+                                Bạn đã từ chối quyền vị trí. Vẫn có thể gửi
+                                report mà không xác minh.
+                              </p>
+                            )}
+                            {locationState === "unavailable" && (
+                              <p
+                                className="mt-2 text-xs text-[#963f2a]"
+                                role="status"
+                              >
+                                Chưa thể lấy vị trí. Vẫn có thể tiếp tục góp
+                                vibe.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        <button
+                          className="w-full rounded-xl bg-[#c96040] px-4 py-3 font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] disabled:cursor-not-allowed disabled:opacity-40"
+                          disabled={!canContinueFromContext}
+                          onClick={() => setStep(2)}
+                          type="button"
+                        >
+                          Tiếp tục
+                        </button>
+                      </>
+                    )}
                   </section>
                 )}
 
@@ -588,38 +693,48 @@ export function VibeReportFlow({
                         2. Chấm nhanh không khí
                       </h3>
                       <p className="mt-1 text-sm text-[#756c63]">
-                        Chọn một mức cho ba chiều phù hợp với mục đích của bạn.
+                        Ba chiều chính là bắt buộc. Trả lời thêm các chiều tùy
+                        chọn sẽ giúp kết quả đầy đủ và đáng tin hơn.
                       </p>
                     </div>
-                    {requiredDimensions.map((dimension) => {
-                      const copy = dimensionCopy[dimension];
-                      return (
-                        <fieldset
-                          className="rounded-2xl bg-white p-4"
-                          key={dimension}
-                        >
-                          <legend className="font-bold">{copy.label}</legend>
-                          <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[#6b7d74]">
-                            <span>{copy.low}</span>
-                            <span>{copy.high}</span>
-                          </div>
-                          <div className="mt-2 grid grid-cols-5 gap-2">
-                            {[1, 2, 3, 4, 5].map((value) => (
-                              <button
-                                aria-label={`${copy.label}: ${value} trên 5`}
-                                aria-pressed={scores[dimension] === value}
-                                className={`rounded-lg border px-2 py-2 text-sm font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] ${scores[dimension] === value ? "border-[#c96040] bg-[#c96040] text-white" : "border-[#c96040]/15 bg-[#eee6da]"}`}
-                                key={value}
-                                onClick={() => updateScore(dimension, value)}
-                                type="button"
-                              >
-                                {value}
-                              </button>
-                            ))}
-                          </div>
-                        </fieldset>
-                      );
-                    })}
+                    {[...requiredDimensions, ...optionalDimensions].map(
+                      (dimension) => {
+                        const copy = dimensionCopy[dimension];
+                        const isRequired =
+                          requiredDimensions.includes(dimension);
+                        return (
+                          <fieldset
+                            className="rounded-2xl bg-white p-4"
+                            key={dimension}
+                          >
+                            <legend className="font-bold">
+                              {copy.label}
+                              <span className="ml-2 text-xs font-semibold text-[#756c63]">
+                                {isRequired ? "Bắt buộc" : "Tùy chọn"}
+                              </span>
+                            </legend>
+                            <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[#6b7d74]">
+                              <span>{copy.low}</span>
+                              <span>{copy.high}</span>
+                            </div>
+                            <div className="mt-2 grid grid-cols-5 gap-2">
+                              {[1, 2, 3, 4, 5].map((value) => (
+                                <button
+                                  aria-label={`${copy.label}: ${value} trên 5`}
+                                  aria-pressed={scores[dimension] === value}
+                                  className={`rounded-lg border px-2 py-2 text-sm font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] ${scores[dimension] === value ? "border-[#c96040] bg-[#c96040] text-white" : "border-[#c96040]/15 bg-[#eee6da]"}`}
+                                  key={value}
+                                  onClick={() => updateScore(dimension, value)}
+                                  type="button"
+                                >
+                                  {value}
+                                </button>
+                              ))}
+                            </div>
+                          </fieldset>
+                        );
+                      },
+                    )}
                     <label
                       className="block text-sm font-bold"
                       htmlFor="vibe-seat-availability"
@@ -686,9 +801,11 @@ export function VibeReportFlow({
                       <span className="mx-2">·</span>
                       {formatVisitedAt(visitedDate, visitedTime)}
                       <span className="mt-2 block text-xs text-[#756c63]">
-                        {locationState === "ready"
-                          ? "Vị trí sẽ được đối chiếu khi gửi report."
-                          : "Report chưa có xác minh vị trí."}
+                        {experience === "recalled"
+                          ? "Trải nghiệm từ lần ghé trước sẽ được lưu là recalled."
+                          : locationState === "ready"
+                            ? "Vị trí sẽ được đối chiếu khi gửi report."
+                            : "Report chưa có xác minh vị trí."}
                       </span>
                     </div>
                     <label

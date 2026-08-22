@@ -10,6 +10,9 @@ const localDefaults = {
   EXPLORE_INCLUDE_REAL_PLACES: "false",
   EXPLORE_PLACE_DATA_MODE: "synthetic",
   EXPLORE_PLACE_METADATA_MODE: "synthetic",
+  VIBE_REPORT_LIMIT_10_MINUTES: "3",
+  VIBE_REPORT_LIMIT_24_HOURS: "10",
+  VIBE_REPORT_PLACE_COOLDOWN_MINUTES: "360",
 } as const;
 
 const environmentSchema = z
@@ -39,6 +42,24 @@ const environmentSchema = z
       .transform((value) => value === "true"),
     EXPLORE_PLACE_DATA_MODE: z.enum(["synthetic", "mixed", "real"]),
     EXPLORE_PLACE_METADATA_MODE: z.enum(["synthetic", "mixed", "real"]),
+    VIBE_REPORT_LIMIT_10_MINUTES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(3),
+    VIBE_REPORT_LIMIT_24_HOURS: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(1_000)
+      .default(10),
+    VIBE_REPORT_PLACE_COOLDOWN_MINUTES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(10_080)
+      .default(360),
     NODE_ENV: z.enum(["development", "test", "production"]).optional(),
   })
   .passthrough();

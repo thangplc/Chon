@@ -21,10 +21,12 @@ export type PlaceDetailIntent = Readonly<{
 }>;
 
 export type PlaceVibePresentation = Readonly<{
+  availableScores: Partial<VibeScores>;
+  coverage: number;
   explanation: ExploreExplanation;
   matchScore: number | null;
   snapshot: VibeSnapshotApiItem | null;
-  scores: VibeScores | null;
+  scores: Partial<VibeScores> | null;
 }>;
 
 const dimensions: readonly VibeDimension[] = [
@@ -44,6 +46,17 @@ function completeScores(
   return Object.fromEntries(
     dimensions.map((dimension) => [dimension, scores[dimension]]),
   ) as VibeScores;
+}
+
+function availableScores(
+  scores: VibeSnapshotApiItem["scores"],
+): Partial<VibeScores> {
+  return Object.fromEntries(
+    dimensions.flatMap((dimension) => {
+      const value = scores[dimension];
+      return typeof value === "number" ? [[dimension, value]] : [];
+    }),
+  );
 }
 
 function selectSnapshot(
@@ -69,12 +82,16 @@ export function buildPlaceVibePresentation(
   intent: PlaceDetailIntent,
 ): PlaceVibePresentation {
   const snapshot = selectSnapshot(snapshots, intent);
-  const scores = snapshot ? completeScores(snapshot.scores) : null;
+  const complete = snapshot ? completeScores(snapshot.scores) : null;
+  const available = snapshot ? availableScores(snapshot.scores) : {};
+  const scores = Object.keys(available).length > 0 ? available : null;
 
   return {
+    availableScores: available,
+    coverage: Object.keys(available).length,
     explanation: explainPurposeMatch(scores, intent.purpose),
     matchScore: scores ? calculateMatchScore(scores, intent.purpose) : null,
-    scores,
+    scores: complete ?? scores,
     snapshot,
   };
 }

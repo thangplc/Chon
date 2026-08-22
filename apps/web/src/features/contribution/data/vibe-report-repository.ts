@@ -20,13 +20,30 @@ export async function submitCommunityVibeReport(
     },
   );
   const body = (await response.json()) as {
+    code?: string;
     detail?: string;
+    retryAfterSeconds?: number;
     title?: string;
   };
 
   if (!response.ok) {
-    throw new Error(body.detail ?? body.title ?? "Không thể gửi góp vibe");
+    throw new VibeReportSubmissionError(
+      body.detail ?? body.title ?? "Không thể gửi góp vibe",
+      body.code,
+      body.retryAfterSeconds,
+    );
   }
 
   return vibeReportSubmissionResponseSchema.parse(body);
+}
+
+export class VibeReportSubmissionError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+    readonly retryAfterSeconds?: number,
+  ) {
+    super(message);
+    this.name = "VibeReportSubmissionError";
+  }
 }

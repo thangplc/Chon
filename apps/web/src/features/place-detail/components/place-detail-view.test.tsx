@@ -1,9 +1,13 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { placeDetailTestData } from "../testing/place-detail-test-data";
 import type { PlaceDetailIntent } from "../domain/place-vibe-presentation";
 import { PlaceDetailView } from "./place-detail-view";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 const intent: PlaceDetailIntent = {
   dayType: "weekday",
