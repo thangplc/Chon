@@ -7,6 +7,7 @@
     "./analytics": "./src/analytics.ts",
     "./auth": "./src/auth.ts",
     "./backend": "./src/backend.ts",
+    "./collections": "./src/collections.ts",
     "./vibe-report": "./src/vibe-report.ts"
   },
   "dependencies": {

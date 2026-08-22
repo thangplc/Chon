@@ -1,6 +1,7 @@
 // Canonical Drizzle schema export for API, migrations and operator tooling.
 export * from "./enums";
 export * from "./analytics-events";
+export * from "./collections";
 export * from "./places";
 export * from "./place-media";
 export * from "./place-metadata-overlays";
