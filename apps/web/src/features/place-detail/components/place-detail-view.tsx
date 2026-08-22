@@ -7,6 +7,7 @@ import {
   type PlaceDetailIntent,
 } from "../domain/place-vibe-presentation";
 import { VibeReportFlow } from "@/features/contribution/components/vibe-report-flow";
+import { SavePlaceButton } from "@/features/collections/components/save-place-button";
 import { PlaceDetailBackControl } from "./place-detail-back-control";
 import { PlaceFacts } from "./place-facts";
 import { PlaceGallery } from "./place-gallery";
@@ -116,11 +117,18 @@ export function PlaceDetailView({
                   {place.name}
                 </h1>
               </div>
-              <span
-                className={`mt-1 shrink-0 rounded-full px-3 py-1.5 text-xs font-extrabold ${statusClassNames[openStatus.tone]}`}
-              >
-                {openStatus.label}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span
+                  className={`mt-1 rounded-full px-3 py-1.5 text-xs font-extrabold ${statusClassNames[openStatus.tone]}`}
+                >
+                  {openStatus.label}
+                </span>
+                <SavePlaceButton
+                  compact
+                  placeName={place.name}
+                  placeSlug={place.slug}
+                />
+              </div>
             </div>
 
             <p className="mt-4 flex items-start gap-2 text-sm leading-6 text-[#5e746a]">

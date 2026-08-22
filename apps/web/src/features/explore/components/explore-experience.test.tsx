@@ -547,7 +547,7 @@ describe("ExploreExperience", () => {
     expect(
       within(screen.getByRole("region", { name: "3 Chốn để thử" })).getByRole(
         "button",
-        { name: /Góc Test 01/ },
+        { name: /^Hạng .*Góc Test 01/ },
       ),
     ).toHaveAttribute("aria-pressed", "true");
     expect(window.location.search).toContain("contribute=1");
@@ -763,7 +763,7 @@ describe("ExploreExperience", () => {
 
     const results = screen.getByRole("region", { name: "3 Chốn để thử" });
     expect(
-      within(results).getByRole("button", { name: /Trạm Test 02/ }),
+      within(results).getByRole("button", { name: /^Hạng .*Trạm Test 02/ }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(scrollIntoView).toHaveBeenCalledWith({
       behavior: "smooth",

@@ -28,6 +28,7 @@ import { getExplorePlaces, getExploreTimeContext } from "../domain/explore";
 import type { UserLocation } from "../hooks/use-geolocation";
 import { trackExploreEvent } from "../analytics/explore-analytics";
 import { VibeReportFlow } from "@/features/contribution/components/vibe-report-flow";
+import { SavePlaceButton } from "@/features/collections/components/save-place-button";
 import {
   createDefaultExploreUrlState,
   parseExploreUrlState,
@@ -1676,7 +1677,7 @@ export function ExploreExperience({
                         </span>
                       </button>
                       {selected && (
-                        <div className="chon-small-selection-actions mt-3 grid-cols-2 gap-2">
+                        <div className="chon-small-selection-actions mt-3 grid-cols-3 gap-2">
                           <Link
                             className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#ddd2c3] px-3 text-sm font-extrabold text-[#28231f] transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
                             href={`/places/${place.slug}${detailSearch}`}
@@ -1693,6 +1694,11 @@ export function ExploreExperience({
                               ✦
                             </span>
                           </button>
+                          <SavePlaceButton
+                            compact
+                            placeName={place.name}
+                            placeSlug={place.slug}
+                          />
                         </div>
                       )}
                     </div>
@@ -1812,6 +1818,11 @@ export function ExploreExperience({
                     ✦
                   </span>
                 </button>
+                <SavePlaceButton
+                  compact
+                  placeName={selectedPlace.name}
+                  placeSlug={selectedPlace.slug}
+                />
               </div>
             </aside>
           )}

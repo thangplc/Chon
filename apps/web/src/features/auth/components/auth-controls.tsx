@@ -1,4 +1,5 @@
 import { auth, signIn, signOut } from "@/auth";
+import Link from "next/link";
 
 import { AuthIdentitySync } from "./auth-identity-sync";
 
@@ -28,6 +29,12 @@ export async function AuthControls({ className = "" }: AuthControlsProps = {}) {
           <span className="hidden max-w-[13rem] truncate font-semibold text-[#756c63] sm:inline">
             Xin chào, {user.name ?? user.email ?? "bạn"}
           </span>
+          <Link
+            className="min-h-9 rounded-full border border-[#ddd2c3] bg-[#fffdf9] px-2.5 py-2 font-bold text-[#28231f] transition hover:border-[#c96040] hover:text-[#963f2a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] sm:px-3"
+            href="/saved"
+          >
+            Đã lưu
+          </Link>
           <form action={signOutFromChon}>
             <button
               className="min-h-9 rounded-full border border-[#ddd2c3] bg-[#fffdf9] px-2.5 font-bold text-[#28231f] transition hover:border-[#c96040] hover:text-[#963f2a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] sm:px-3"
