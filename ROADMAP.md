@@ -124,9 +124,10 @@ Người dùng nhận danh sách xếp hạng khác nhau cho làm việc, đi m�
 - [x] Authentication và identity foundation — Google OAuth/Auth.js JWT session, `users`/`user_identities`, signed web-to-API assertion, `/v1/auth/me` và public Explore boundary.
 - [x] Luồng vibe report 3 bước, mobile-first — authenticated community submit, three purpose-aware dimensions, pending moderation và explicit success/error states.
 - [x] Xác minh gần địa điểm theo lựa chọn của người dùng — geolocation chỉ chạy khi user chủ động bấm; API đối chiếu POI bằng PostGIS, chỉ lưu mức `verified`/`approximate`/`none` và không lưu tọa độ user.
-- [ ] Chống spam và rate limit cơ bản.
-- [ ] Operational script để ẩn/khôi phục report và ghi audit event.
-- [ ] Cập nhật snapshot sau khi report được duyệt.
+- [x] Chống spam và rate limit cơ bản — PostgreSQL-backed quota theo identity,
+  cooldown theo địa điểm, duplicate detection và HTTP 429 có Retry-After.
+- [x] Cập nhật snapshot sau khi report được auto-publish — rebuild riêng POI sau
+  transaction thành công; snapshot chỉ tổng hợp report `approved`.
 
 ### Demo
 
@@ -169,7 +170,8 @@ Chỉ ưu tiên dựa trên dữ liệu beta:
 - Vibe heatmap theo khu vực.
 - Recommendation cá nhân hóa.
 - Chủ địa điểm xác minh profile và xem insight.
-- Admin Dashboard cho service-area/boundary, POI import và moderation.
+- Admin Dashboard cho service-area/boundary, POI import và moderation, gồm thao
+  tác ẩn/khôi phục report và ghi audit event.
 - Mở rộng sang khu vực hoặc loại địa điểm mới.
 
 ## Backlog ưu tiên P0
