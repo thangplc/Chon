@@ -29,6 +29,8 @@ Tài liệu chi tiết hỗ trợ:
 - [Provider vibe terms/credential/coverage spike](docs/provider-vibe-spike.md)
 - [Vibe taxonomy](docs/vibe-taxonomy.md)
 - [Vibe data policy](docs/vibe-data-policy.md)
+- [Authentication](docs/authentication.md)
+- [Community contribution](docs/contribution.md)
 - [Purpose profiles](docs/purpose-profiles.md)
 - [Prototype specification](docs/prototype-spec.md)
 - [Data contract](docs/data-contract.md)
@@ -139,7 +141,11 @@ Place Detail dùng canonical URL và chỉ trả địa điểm `published`:
 GET /places/goc-may-01
 ```
 
-Khi điều hướng từ Explore trên tablet/desktop, App Router intercept URL này thành drawer. Truy cập trực tiếp hoặc refresh vẫn render full page. Gallery chỉ lấy tối đa 5 media `approved` có rights hợp lệ; fixture SVG luôn được gắn nhãn simulated và provenance.
+Explore luôn điều hướng URL này thành full page trên mọi kích thước màn hình.
+Selection card trên Explore vẫn cho phép mở modal `Góp vibe` nhanh; trang chi tiết
+cũng dùng cùng modal và giữ context qua Google OAuth bằng query `contribute=1`
+và `place=<slug>`. Gallery chỉ lấy tối đa 5 media `approved` có rights hợp lệ;
+fixture SVG luôn được gắn nhãn simulated và provenance.
 
 Spatial place API:
 
@@ -163,6 +169,10 @@ Chi tiết contract và giới hạn tại [Spatial place query](docs/spatial-pl
 Explore lưu bộ lọc vào URL canonical để chia sẻ và gửi analytics context đã
 ẩn danh. Chi tiết tham số, privacy boundary và endpoint tại
 [Explore sharing và analytics](docs/explore-sharing-analytics.md).
+
+Explore và Place Detail vẫn public. Đóng góp community đầy đủ yêu cầu đăng
+nhập Google OAuth; cấu hình Auth.js và assertion server-to-server tại
+[Authentication](docs/authentication.md).
 
 Xem quy trình migration và nguyên tắc an toàn tại [Database runbook](docs/database.md).
 

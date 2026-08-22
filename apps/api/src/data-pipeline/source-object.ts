@@ -12,8 +12,9 @@ const manifestSchema = z.object({
   boundaryVersion: z.number().int().positive(),
   bytes: z.number().int().positive(),
   checksum: z.string().regex(/^[a-f0-9]{64}$/),
-  osmEndDate: z.string().min(1),
-  osmFeatureType: z.literal("historic"),
+  osmAdminLevel: z.string().min(1).optional(),
+  osmEndDate: z.string().min(1).optional(),
+  osmFeatureType: z.enum(["administrative", "historic"]),
   retrievalUrl: z.url(),
   retrievedAt: z.iso.datetime({ offset: true }),
   schemaVersion: z.literal(1),
@@ -62,7 +63,10 @@ export async function readVerifiedBoundarySourceObject(
   const manifest = manifestSchema.parse(JSON.parse(rawManifest));
   const expectedMetadata = {
     boundaryVersion: definition.version,
-    osmEndDate: definition.osmEndDate,
+    ...(definition.areaType === "historic_district"
+      ? { osmEndDate: definition.osmEndDate }
+      : { osmAdminLevel: definition.osmAdminLevel }),
+    osmFeatureType: definition.osmFeatureType,
     serviceAreaCode: definition.code,
     sourceLicense: definition.sourceLicense,
     sourceName: definition.sourceName,

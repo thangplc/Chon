@@ -122,7 +122,7 @@ async function main(): Promise<void> {
         ? "No boundary changes were written."
         : process.exitCode
           ? "All boundary changes were rolled back."
-          : "All three boundaries were committed atomically.",
+          : `All ${serviceAreaBoundaries.length} boundaries were committed atomically.`,
     );
   }
 }

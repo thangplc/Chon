@@ -10,6 +10,7 @@ describe("readVietmapPoiConfig", () => {
       enabled: false,
       maxRequests: 200,
       placeBaseUrl: "https://maps.vietmap.vn/api/place/v4",
+      requestIntervalMs: 500,
       reverseBaseUrl: "https://maps.vietmap.vn/api/reverse/v4",
       productionReady: false,
       queryText: "cafe",
@@ -32,6 +33,7 @@ describe("readVietmapPoiConfig", () => {
       VIETMAP_POI_ENABLED: "true",
       VIETMAP_POI_MAX_REQUESTS: "12",
       VIETMAP_POI_PRODUCTION_READY: "true",
+      VIETMAP_POI_REQUEST_INTERVAL_MS: "750",
       VIETMAP_POI_TIMEOUT_MS: "7000",
     });
 
@@ -40,7 +42,16 @@ describe("readVietmapPoiConfig", () => {
       enabled: true,
       maxRequests: 12,
       productionReady: true,
+      requestIntervalMs: 750,
       timeoutMs: 7_000,
     });
+  });
+
+  it("rejects an invalid request interval", () => {
+    expect(() =>
+      readVietmapPoiConfig({ VIETMAP_POI_REQUEST_INTERVAL_MS: "-1" }),
+    ).toThrowError(
+      "VIETMAP_POI_REQUEST_INTERVAL_MS must be an integer between 0 and 60000",
+    );
   });
 });

@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     "./analytics": "./src/analytics.ts",
-    "./backend": "./src/backend.ts"
+    "./auth": "./src/auth.ts",
+    "./backend": "./src/backend.ts",
+    "./vibe-report": "./src/vibe-report.ts"
   },
   "dependencies": {
     "zod": "^4.4.3"

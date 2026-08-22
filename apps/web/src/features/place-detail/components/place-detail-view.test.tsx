@@ -1,8 +1,21 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { placeDetailTestData } from "../testing/place-detail-test-data";
+import type { PlaceDetailIntent } from "../domain/place-vibe-presentation";
 import { PlaceDetailView } from "./place-detail-view";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
+const intent: PlaceDetailIntent = {
+  dayType: "weekday",
+  purpose: "work",
+  purposeLabel: "Làm việc",
+  timeBucket: "morning",
+  timeLabel: "09:00",
+};
 
 const canonicalVibe = {
   aggregationVersion: "fusion-v1",
@@ -29,30 +42,16 @@ const canonicalVibe = {
   timeBucket: "morning" as const,
 };
 
-const back = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ back }),
-}));
-
-vi.mock("./place-detail-map", () => ({
-  PlaceDetailMap: ({ name }: { name: string }) => (
-    <section aria-label={`Vị trí của ${name}`} />
-  ),
-}));
-
 describe("PlaceDetailView", () => {
-  beforeEach(() => back.mockClear());
-
   it("renders verified opening hours, price and internal areas", () => {
-    render(<PlaceDetailView mapStyleUrl={null} place={placeDetailTestData} />);
+    render(<PlaceDetailView intent={intent} place={placeDetailTestData} />);
 
     expect(
       screen.getByRole("heading", { name: "Góc Test", level: 1 }),
     ).toBeInTheDocument();
     expect(screen.getByText(/12 Đường Test/)).toBeInTheDocument();
     expect(
-      screen.getByText("Địa điểm và hình ảnh đang là dữ liệu giả lập"),
+      screen.getByText("Prototype · địa điểm và hình ảnh mô phỏng"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Trở về Explore" }),
@@ -64,15 +63,16 @@ describe("PlaceDetailView", () => {
     expect(screen.getByText(/45\.000/)).toBeInTheDocument();
     expect(screen.getByText(/Phân khúc: Phổ thông/)).toBeInTheDocument();
     expect(screen.getByText("Khu trong nhà")).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: "Vị trí của Góc Test" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Chỉ đường/ })).toHaveAttribute(
+      "href",
+      `https://www.openstreetmap.org/?mlat=${placeDetailTestData.latitude}&mlon=${placeDetailTestData.longitude}#map=18/${placeDetailTestData.latitude}/${placeDetailTestData.longitude}`,
+    );
   });
 
   it("keeps missing facts explicit without inventing values", () => {
     render(
       <PlaceDetailView
-        mapStyleUrl={null}
+        intent={intent}
         place={{
           ...placeDetailTestData,
           areas: [],
@@ -99,51 +99,25 @@ describe("PlaceDetailView", () => {
     ).toBeInTheDocument();
   });
 
-  it("returns through router history when rendered inside the drawer", () => {
-    render(
-      <PlaceDetailView
-        mapStyleUrl={null}
-        place={placeDetailTestData}
-        presentation="drawer"
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Trở về Explore" }));
-
-    expect(back).toHaveBeenCalledOnce();
-  });
-
-  it("offers canonical full-page navigation from the drawer", () => {
-    render(
-      <PlaceDetailView
-        mapStyleUrl={null}
-        place={placeDetailTestData}
-        presentation="drawer"
-      />,
-    );
-
-    expect(screen.getByRole("link", { name: /Mở toàn trang/ })).toHaveAttribute(
-      "href",
-      "/places/goc-test",
-    );
-  });
-
   it("renders canonical dimensions, confidence and evidence counts", () => {
     render(
       <PlaceDetailView
-        mapStyleUrl={null}
+        intent={intent}
         place={placeDetailTestData}
         vibeSnapshots={[canonicalVibe]}
       />,
     );
 
+    expect(screen.getByText(/% phù hợp/)).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Chốn vibe" }),
+      screen.getByRole("heading", {
+        name: "Vì sao phù hợp với làm việc?",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Tin cậy trung bình")).toBeInTheDocument();
-    expect(screen.getByText("3 góp ý · 1 nguồn bổ trợ")).toBeInTheDocument();
-    expect(screen.getByText("Ồn")).toBeInTheDocument();
+    expect(screen.getByText("Độ tin cậy trung bình")).toBeInTheDocument();
+    expect(screen.getByText(/3 góp ý cộng đồng/)).toBeInTheDocument();
+    expect(screen.getByText("Độ ồn")).toBeInTheDocument();
     expect(screen.getByText("Làm việc")).toBeInTheDocument();
-    expect(screen.getByText("5.0/5")).toBeInTheDocument();
+    expect(screen.getByLabelText("Làm việc: 5.0 trên 5")).toBeInTheDocument();
   });
 });

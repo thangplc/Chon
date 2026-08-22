@@ -81,7 +81,7 @@ function compareAssessments(
 }
 
 export function explainPurposeMatch(
-  vibe: VibeScores | null,
+  vibe: Partial<VibeScores> | null,
   purpose: PurposeId,
 ): ExploreExplanation {
   if (!vibe) {
@@ -92,12 +92,24 @@ export function explainPurposeMatch(
   }
 
   const preference = purposePreferences[purpose];
-  const assessments = dimensions.map((dimension) => ({
-    delta: Math.abs(vibe[dimension] - preference.targets[dimension]),
-    dimension,
-    fitScore: calculateFitScore(vibe[dimension], preference.targets[dimension]),
-    weight: preference.weights[dimension],
-  }));
+  const availableDimensions = dimensions.filter(
+    (dimension) => typeof vibe[dimension] === "number",
+  );
+  if (availableDimensions.length === 0) {
+    return {
+      cautions: ["Chưa đủ dữ liệu vibe để giải thích mức độ phù hợp."],
+      reasons: [],
+    };
+  }
+  const assessments = availableDimensions.map((dimension) => {
+    const value = vibe[dimension] as number;
+    return {
+      delta: Math.abs(value - preference.targets[dimension]),
+      dimension,
+      fitScore: calculateFitScore(value, preference.targets[dimension]),
+      weight: preference.weights[dimension],
+    };
+  });
   const positiveAssessments = assessments
     .filter(({ fitScore }) => fitScore >= 75)
     .sort(compareAssessments);
@@ -114,13 +126,22 @@ export function explainPurposeMatch(
     .slice(0, 1)
     .map(
       ({ delta, dimension }) =>
-        `${formatDimension(dimension, vibe[dimension])}; lệch ${delta} mức so với nhu cầu.`,
+        `${formatDimension(dimension, vibe[dimension] as number)}; lệch ${delta} mức so với nhu cầu.`,
     );
+
+  const missingDimensions = dimensions.filter(
+    (dimension) => vibe[dimension] === undefined,
+  );
+  if (missingDimensions.length > 0) {
+    cautions.push(
+      `Đánh giá tạm thời; còn thiếu ${missingDimensions.map((dimension) => dimensionLabels[dimension].toLocaleLowerCase("vi-VN")).join(", ")}.`,
+    );
+  }
 
   return {
     cautions,
     reasons: reasonAssessments.map(({ dimension }) =>
-      formatDimension(dimension, vibe[dimension]),
+      formatDimension(dimension, vibe[dimension] as number),
     ),
   };
 }

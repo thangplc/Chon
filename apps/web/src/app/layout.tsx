@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/500.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/be-vietnam-pro/700.css";
+import "@fontsource/be-vietnam-pro/800.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import "./globals.css";
@@ -16,16 +21,12 @@ export const metadata: Metadata = {
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;
-  modal: ReactNode;
 }>;
 
-export default function RootLayout({ children, modal }: RootLayoutProps) {
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="vi">
-      <body>
-        {children}
-        {modal}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

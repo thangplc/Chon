@@ -3,7 +3,6 @@ import type {
   ExploreCommunityReport,
   ExploreDataset,
   ExploreDayType,
-  ExploreDistrict,
   ExplorePriceLevel,
   ExploreSizeCategory,
   ExploreSourcePlace,
@@ -31,6 +30,7 @@ const dimensions: readonly VibeDimension[] = [
 
 export { purposePreferences } from "./purpose-preferences";
 export { explainPurposeMatch } from "./explanation";
+export type { ExploreExplanation } from "./explanation";
 
 export type ExplorePlace = ExploreSourcePlace &
   Readonly<{
@@ -40,12 +40,13 @@ export type ExplorePlace = ExploreSourcePlace &
     providerSignalCount: number;
     reportCount: number;
     vibeIsSimulated: boolean;
-    vibe: VibeScores | null;
+    vibe: Partial<VibeScores> | null;
   }>;
 
 export type ExploreFilters = Readonly<{
   dayType?: ExploreDayType;
-  district: "all" | ExploreDistrict;
+  district?: "all" | string;
+  serviceAreaCode?: "all" | string;
   amenities?: ReadonlySet<string>;
   placeIds?: ReadonlySet<string>;
   priceLevels?: ReadonlySet<ExplorePriceLevel>;
@@ -128,15 +129,14 @@ function averageScores(
   ) as unknown as VibeScores;
 }
 
-function completeScores(
+function availableScores(
   scores: ExploreVibeSnapshot["scores"],
-): VibeScores | null {
-  const values = dimensions.map((dimension) => scores[dimension]);
-  return values.every((value): value is number => typeof value === "number")
-    ? (Object.fromEntries(
-        dimensions.map((dimension) => [dimension, scores[dimension]]),
-      ) as VibeScores)
-    : null;
+): Partial<VibeScores> | null {
+  const entries = dimensions.flatMap((dimension) => {
+    const value = scores[dimension];
+    return typeof value === "number" ? [[dimension, value] as const] : [];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
 function selectCanonicalVibe(
@@ -187,16 +187,24 @@ export function getExploreTimeContext(
   };
 }
 
-function calculateMatchScore(vibe: VibeScores, purpose: PurposeId): number {
+export function calculateMatchScore(
+  vibe: Partial<VibeScores>,
+  purpose: PurposeId,
+): number {
   const preference = purposePreferences[purpose];
-  const totalWeight = dimensions.reduce(
+  const availableDimensions = dimensions.filter(
+    (dimension) => typeof vibe[dimension] === "number",
+  );
+  const totalWeight = availableDimensions.reduce(
     (total, dimension) => total + preference.weights[dimension],
     0,
   );
-  const weightedTotal = dimensions.reduce((score, dimension) => {
+  if (totalWeight === 0) return 0;
+  const weightedTotal = availableDimensions.reduce((score, dimension) => {
+    const value = vibe[dimension] as number;
     const dimensionScore = Math.max(
       0,
-      100 - Math.abs(vibe[dimension] - preference.targets[dimension]) * 25,
+      100 - Math.abs(value - preference.targets[dimension]) * 25,
     );
     return score + dimensionScore * preference.weights[dimension];
   }, 0);
@@ -211,7 +219,12 @@ export function getExplorePlaces(
   return dataset.places
     .filter(
       (place) =>
-        filters.district === "all" || place.district === filters.district,
+        (filters.serviceAreaCode === undefined ||
+          filters.serviceAreaCode === "all" ||
+          place.serviceAreaCode === filters.serviceAreaCode) &&
+        (filters.district === undefined ||
+          filters.district === "all" ||
+          place.district === filters.district),
     )
     .filter((place) => !filters.placeIds || filters.placeIds.has(place.id))
     .filter((place) => matchesMetadataFilters(place, filters))
@@ -232,7 +245,7 @@ export function getExplorePlaces(
             )
           : [];
       const vibe = canonicalVibe
-        ? completeScores(canonicalVibe.scores)
+        ? availableScores(canonicalVibe.scores)
         : averageScores(relevantReports);
 
       return {

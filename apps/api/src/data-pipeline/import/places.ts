@@ -7,6 +7,11 @@ import type { ImportDatabaseClient } from "./database";
 import type { SummaryDraft } from "./summary";
 import type { ImportIssue } from "./types";
 import type { PlaceInput, PlaceMutableField } from "./validation";
+import {
+  arePotentialDuplicatePlaces,
+  normalizedPlaceName,
+  placeNamesAreSimilar,
+} from "../place-identity";
 
 type ExistingPlace = Readonly<{
   address: string;
@@ -47,24 +52,13 @@ export type PlacePlan = Readonly<{
   }>[];
 }>;
 
-function normalizeName(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replaceAll("đ", "d")
-    .replaceAll("Đ", "D")
-    .toLocaleLowerCase("vi")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
 export function slugifyPlaceName(name: string, fallback: string): string {
-  const slug = normalizeName(name).replaceAll(" ", "-");
+  const slug = normalizedPlaceName(name).replaceAll(" ", "-");
   return slug || fallback.replaceAll("_", "-");
 }
 
 function disambiguateSlug(baseSlug: string, internalId: string): string {
-  const suffix = normalizeName(internalId).replaceAll(" ", "-");
+  const suffix = normalizedPlaceName(internalId).replaceAll(" ", "-");
   const maxBaseLength = Math.max(1, 160 - suffix.length - 1);
   const truncatedBase = baseSlug.slice(0, maxBaseLength).replace(/-+$/, "");
   return `${truncatedBase || "place"}-${suffix}`;
@@ -72,38 +66,6 @@ function disambiguateSlug(baseSlug: string, internalId: string): string {
 
 function coordinatesAreEqual(left: number, right: number): boolean {
   return Math.abs(left - right) < 1e-9;
-}
-
-function editDistance(left: string, right: string): number {
-  const previous = Array.from(
-    { length: right.length + 1 },
-    (_, index) => index,
-  );
-
-  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
-    const current = [leftIndex];
-    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
-      current[rightIndex] = Math.min(
-        current[rightIndex - 1] + 1,
-        previous[rightIndex] + 1,
-        previous[rightIndex - 1] +
-          (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
-      );
-    }
-    previous.splice(0, previous.length, ...current);
-  }
-
-  return previous[right.length];
-}
-
-function namesAreSimilar(left: string, right: string): boolean {
-  const normalizedLeft = normalizeName(left);
-  const normalizedRight = normalizeName(right);
-  const maximumLength = Math.max(normalizedLeft.length, normalizedRight.length);
-  if (maximumLength === 0) return true;
-  return (
-    1 - editDistance(normalizedLeft, normalizedRight) / maximumLength >= 0.8
-  );
 }
 
 function immutablePlaceFieldsMatch(
@@ -170,22 +132,6 @@ function mutablePlaceFieldsMatch(
       openingHoursAreEqual(existing.openingHours, input.opening_hours ?? null),
     )
   );
-}
-
-function haversineDistanceMeters(left: PlaceInput, right: PlaceInput): number {
-  const earthRadius = 6_371_000;
-  const radians = (degrees: number) => (degrees * Math.PI) / 180;
-  const latitudeDelta = radians(right.latitude - left.latitude);
-  const longitudeDelta = radians(right.longitude - left.longitude);
-  const leftLatitude = radians(left.latitude);
-  const rightLatitude = radians(right.latitude);
-  const a =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(leftLatitude) *
-      Math.cos(rightLatitude) *
-      Math.sin(longitudeDelta / 2) ** 2;
-
-  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 async function loadExistingPlaces(
@@ -298,7 +244,7 @@ async function findNearbySameName(
   return result.rows
     .filter(
       ({ name, same_location: sameLocation }) =>
-        sameLocation || namesAreSimilar(name, input.name),
+        sameLocation || placeNamesAreSimilar(name, input.name),
     )
     .map(({ internal_id: internalId }) => internalId);
 }
@@ -426,10 +372,7 @@ export async function planPlaces(
       const left = create[leftIndex].input;
       const right = create[rightIndex].input;
       if (
-        haversineDistanceMeters(left, right) <= 30 &&
-        (namesAreSimilar(left.name, right.name) ||
-          (coordinatesAreEqual(left.latitude, right.latitude) &&
-            coordinatesAreEqual(left.longitude, right.longitude)))
+        arePotentialDuplicatePlaces(left, right)
       ) {
         conflictingIds.add(left.internal_id);
         conflictingIds.add(right.internal_id);

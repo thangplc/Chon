@@ -28,6 +28,46 @@ const productionDataTypes = ["editorial", "community"] as const;
 export class VibeSnapshotBuildRunner {
   constructor(private readonly db: VibeSnapshotDatabase) {}
 
+  async rebuildForPlace(
+    placeId: string,
+    environment: ApiEnvironment["DATA_IMPORT_TARGET_ENVIRONMENT"],
+  ): Promise<number> {
+    const conditions = [
+      eq(places.id, placeId),
+      eq(places.status, "published"),
+      eq(vibeReports.moderationStatus, "approved"),
+      isNotNull(vibeReports.dayType),
+      isNotNull(vibeReports.timeBucket),
+    ];
+    if (environment === "production") {
+      conditions.push(eq(vibeReports.isSimulated, false));
+      conditions.push(inArray(vibeReports.dataType, productionDataTypes));
+    }
+
+    const rows = await this.selectReports(conditions);
+    const reports = toAggregationReports(rows);
+    const snapshots = aggregateVibeReports(reports);
+
+    await this.db.transaction(async (transaction) => {
+      await transaction
+        .delete(vibeSnapshots)
+        .where(
+          and(
+            eq(vibeSnapshots.component, "contribution"),
+            eq(vibeSnapshots.placeId, placeId),
+          ),
+        );
+
+      if (snapshots.length > 0) {
+        await transaction
+          .insert(vibeSnapshots)
+          .values(snapshots.map((snapshot) => toInsertValues(snapshot)));
+      }
+    });
+
+    return snapshots.length;
+  }
+
   async rebuild(
     environment: ApiEnvironment["DATA_IMPORT_TARGET_ENVIRONMENT"],
     dryRun = false,
@@ -43,61 +83,11 @@ export class VibeSnapshotBuildRunner {
       conditions.push(inArray(vibeReports.dataType, productionDataTypes));
     }
 
-    const rows = await this.db
-      .select({
-        crowd: vibeReports.crowd,
-        dataType: vibeReports.dataType,
-        dayType: vibeReports.dayType,
-        id: vibeReports.internalId,
-        isSimulated: vibeReports.isSimulated,
-        lighting: vibeReports.lighting,
-        noise: vibeReports.noise,
-        placeAreaId: vibeReports.placeAreaId,
-        placeId: vibeReports.placeId,
-        privacy: vibeReports.privacy,
-        socialEnergy: vibeReports.socialEnergy,
-        timeBucket: vibeReports.timeBucket,
-        visitedAt: vibeReports.visitedAt,
-        workability: vibeReports.workability,
-        openingHours: places.openingHours,
-      })
-      .from(vibeReports)
-      .innerJoin(places, eq(vibeReports.placeId, places.id))
-      .where(and(...conditions));
+    const rows = await this.selectReports(conditions);
 
     let skippedReports = 0;
-    const reports: VibeReportForAggregation[] = rows.flatMap((row) => {
-      const timezone = row.openingHours?.timezone;
-      const dayType =
-        row.dayType ??
-        (timezone ? getDayTypeForDate(row.visitedAt, timezone) : undefined);
-      const timeBucket =
-        row.timeBucket ??
-        (timezone ? getTimeBucketForDate(row.visitedAt, timezone) : undefined);
-      if (!dayType || !timeBucket) {
-        skippedReports += 1;
-        return [];
-      }
-      return [
-        {
-          dataType: row.dataType,
-          dayType,
-          id: row.id,
-          isSimulated: row.isSimulated,
-          placeAreaId: row.placeAreaId,
-          placeId: row.placeId,
-          scores: {
-            crowd: row.crowd,
-            lighting: row.lighting,
-            noise: row.noise,
-            privacy: row.privacy,
-            socialEnergy: row.socialEnergy,
-            workability: row.workability,
-          },
-          timeBucket,
-          visitedAt: row.visitedAt,
-        } satisfies VibeReportForAggregation,
-      ];
+    const reports = toAggregationReports(rows, () => {
+      skippedReports += 1;
     });
     const snapshots = aggregateVibeReports(reports);
 
@@ -125,6 +115,69 @@ export class VibeSnapshotBuildRunner {
       snapshots: snapshots.length,
     };
   }
+
+  selectReports(conditions: Parameters<typeof and>) {
+    return this.db
+      .select({
+        crowd: vibeReports.crowd,
+        dataType: vibeReports.dataType,
+        dayType: vibeReports.dayType,
+        id: vibeReports.internalId,
+        isSimulated: vibeReports.isSimulated,
+        lighting: vibeReports.lighting,
+        noise: vibeReports.noise,
+        placeAreaId: vibeReports.placeAreaId,
+        placeId: vibeReports.placeId,
+        privacy: vibeReports.privacy,
+        socialEnergy: vibeReports.socialEnergy,
+        timeBucket: vibeReports.timeBucket,
+        visitedAt: vibeReports.visitedAt,
+        workability: vibeReports.workability,
+        openingHours: places.openingHours,
+      })
+      .from(vibeReports)
+      .innerJoin(places, eq(vibeReports.placeId, places.id))
+      .where(and(...conditions));
+  }
+}
+
+function toAggregationReports(
+  rows: Awaited<ReturnType<VibeSnapshotBuildRunner["selectReports"]>>,
+  onSkipped: () => void = () => undefined,
+): VibeReportForAggregation[] {
+  return rows.flatMap((row) => {
+    const timezone = row.openingHours?.timezone;
+    const dayType =
+      row.dayType ??
+      (timezone ? getDayTypeForDate(row.visitedAt, timezone) : undefined);
+    const timeBucket =
+      row.timeBucket ??
+      (timezone ? getTimeBucketForDate(row.visitedAt, timezone) : undefined);
+    if (!dayType || !timeBucket) {
+      onSkipped();
+      return [];
+    }
+    return [
+      {
+        dataType: row.dataType,
+        dayType,
+        id: row.id,
+        isSimulated: row.isSimulated,
+        placeAreaId: row.placeAreaId,
+        placeId: row.placeId,
+        scores: {
+          crowd: row.crowd,
+          lighting: row.lighting,
+          noise: row.noise,
+          privacy: row.privacy,
+          socialEnergy: row.socialEnergy,
+          workability: row.workability,
+        },
+        timeBucket,
+        visitedAt: row.visitedAt,
+      } satisfies VibeReportForAggregation,
+    ];
+  });
 }
 
 function toInsertValues(snapshot: VibeSnapshot) {

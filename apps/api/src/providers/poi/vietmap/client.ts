@@ -114,11 +114,18 @@ function composeReverseAddress(result: VietmapReverseResult): string | null {
 }
 
 function retryDelayMs(response: Response | undefined, attempt: number): number {
-  const retryAfter = Number(response?.headers.get("retry-after"));
-  if (Number.isFinite(retryAfter) && retryAfter >= 0) {
-    return Math.min(Math.max(retryAfter * 1_000, 500), 30_000);
+  const retryAfterHeader = response?.headers.get("retry-after");
+  if (retryAfterHeader) {
+    const retryAfterSeconds = Number(retryAfterHeader);
+    const retryAfterMs = Number.isFinite(retryAfterSeconds)
+      ? retryAfterSeconds * 1_000
+      : Date.parse(retryAfterHeader) - Date.now();
+    if (Number.isFinite(retryAfterMs) && retryAfterMs >= 0) {
+      return Math.min(Math.max(retryAfterMs, 500), 60_000);
+    }
   }
-  return Math.min(500 * 2 ** attempt, 30_000);
+  const baseDelay = response?.status === 429 ? 2_000 : 500;
+  return Math.min(baseDelay * 2 ** attempt, 60_000);
 }
 
 async function mapWithConcurrency<T, U>(
@@ -157,6 +164,8 @@ export class VietmapPoiClientError extends Error {
 export class VietmapPoiClient implements PoiProviderAdapter {
   readonly provider = "vietmap_maps" as const;
   #requestCount = 0;
+  #requestGate: Promise<void> = Promise.resolve();
+  #lastRequestStartedAt = 0;
   #placeDetails = new Map<string, VietmapPlaceResponse>();
   #reverseDetails = new Map<string, VietmapReverseResult[]>();
 
@@ -165,6 +174,29 @@ export class VietmapPoiClient implements PoiProviderAdapter {
     private readonly fetcher: Fetcher = globalThis.fetch,
     private readonly clock: () => Date = () => new Date(),
   ) {}
+
+  async #fetchWithRateLimit(url: URL, init: RequestInit): Promise<Response> {
+    const previousRequest = this.#requestGate;
+    let releaseRequest: () => void = () => undefined;
+    this.#requestGate = new Promise<void>((resolve) => {
+      releaseRequest = resolve;
+    });
+
+    await previousRequest;
+    try {
+      const waitMs = Math.max(
+        0,
+        this.#lastRequestStartedAt + this.config.requestIntervalMs - Date.now(),
+      );
+      if (waitMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
+      this.#lastRequestStartedAt = Date.now();
+      return await this.fetcher(url, init);
+    } finally {
+      releaseRequest();
+    }
+  }
 
   async #requestJson(
     url: URL,
@@ -182,7 +214,7 @@ export class VietmapPoiClient implements PoiProviderAdapter {
 
     url.searchParams.set("apikey", this.config.apiKey);
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       if (this.#requestCount >= this.config.maxRequests) {
         throw new VietmapPoiClientError(
           `VIETMAP request limit reached (${this.config.maxRequests})`,
@@ -197,10 +229,12 @@ export class VietmapPoiClient implements PoiProviderAdapter {
       let response: Response;
 
       try {
-        response = await this.fetcher(url, { signal: controller.signal });
+        response = await this.#fetchWithRateLimit(url, {
+          signal: controller.signal,
+        });
       } catch (error) {
         clearTimeout(timeout);
-        if (attempt < 2) {
+        if (attempt < 4) {
           await new Promise((resolve) =>
             setTimeout(resolve, retryDelayMs(response, attempt)),
           );
@@ -215,7 +249,7 @@ export class VietmapPoiClient implements PoiProviderAdapter {
 
       if (!response.ok) {
         const retryable = response.status === 429 || response.status >= 500;
-        if (retryable && attempt < 2) {
+        if (retryable && attempt < 4) {
           await new Promise((resolve) =>
             setTimeout(resolve, retryDelayMs(response, attempt)),
           );

@@ -49,6 +49,7 @@ function geolocationButtonLabel(status: GeolocationStatus): string {
 }
 
 type ExploreMapProps = Readonly<{
+  focusBounds?: MapViewportBounds | null;
   locationSelectionEnabled?: boolean;
   mapStyleUrl: string | null;
   onSelectLocation?: (
@@ -99,6 +100,7 @@ function createPlaceFeatureCollection(
 }
 
 export function ExploreMap({
+  focusBounds,
   locationSelectionEnabled = false,
   mapStyleUrl,
   onSelectLocation,
@@ -359,6 +361,17 @@ export function ExploreMap({
   useEffect(() => {
     if (!mapInstance || mapStatus !== "ready") return;
 
+    if (focusBounds) {
+      mapInstance.fitBounds(
+        [
+          [focusBounds.west, focusBounds.south],
+          [focusBounds.east, focusBounds.north],
+        ],
+        { duration: 500, maxZoom: 14, padding: 64 },
+      );
+      return;
+    }
+
     const bounds = new maplibregl.LngLatBounds();
     places.forEach((place) => bounds.extend([place.longitude, place.latitude]));
 
@@ -375,7 +388,7 @@ export function ExploreMap({
         padding: 64,
       });
     }
-  }, [mapInstance, mapStatus, places]);
+  }, [focusBounds, mapInstance, mapStatus, places]);
 
   useEffect(() => {
     if (!mapInstance || !selectedPlaceId) return;
@@ -462,21 +475,21 @@ export function ExploreMap({
         }}
       />
 
-      <div className="absolute top-3 left-3 z-20 max-w-[calc(100%-5rem)] rounded-2xl border border-white/80 bg-white/95 p-2.5 shadow-md backdrop-blur">
+      <div className="absolute top-3 left-3 z-20 max-w-[min(260px,calc(100%-4.5rem))] rounded-xl border border-white/80 bg-white/95 p-2 shadow-md backdrop-blur">
         <button
-          className="inline-flex items-center gap-2 rounded-xl bg-[#173f33] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#245a49] disabled:cursor-wait disabled:opacity-70"
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#173f33] px-2.5 py-1.5 text-[10px] font-bold text-white transition hover:bg-[#245a49] disabled:cursor-wait disabled:opacity-70"
           disabled={geolocationStatus === "requesting"}
           onClick={requestLocation}
           type="button"
         >
-          <span aria-hidden="true" className="text-base leading-none">
+          <span aria-hidden="true" className="text-sm leading-none">
             ◎
           </span>
           {geolocationButtonLabel(geolocationStatus)}
         </button>
         <p
           aria-live={geolocationStatus === "denied" ? "assertive" : "polite"}
-          className={`mt-1.5 max-w-sm text-[11px] leading-4 ${
+          className={`mt-1 max-w-[230px] text-[10px] leading-4 ${
             geolocationStatus === "granted"
               ? "font-semibold text-[#25704f]"
               : geolocationStatus === "idle" ||

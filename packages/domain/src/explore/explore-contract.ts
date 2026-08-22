@@ -1,18 +1,15 @@
 // Shared Explore contract; UI labels remain part of the product taxonomy.
 export const purposes = [
-  { id: "work", label: "Làm việc" },
-  { id: "study", label: "Học/đọc" },
-  { id: "solo", label: "Đi một mình" },
-  { id: "date", label: "Hẹn hò" },
-  { id: "friends", label: "Gặp bạn" },
-  { id: "business_meeting", label: "Họp việc" },
-  { id: "relax", label: "Thư giãn" },
-  { id: "late_night", label: "Đi khuya" },
+  { id: "work", label: "Làm việc", icon: "💼" },
+  { id: "study", label: "Học/đọc", icon: "📚" },
+  { id: "solo", label: "Đi một mình", icon: "🚶" },
+  { id: "date", label: "Hẹn hò", icon: "♡" },
+  { id: "friends", label: "Gặp bạn", icon: "👥" },
+  { id: "business_meeting", label: "Họp việc", icon: "🤝" },
+  { id: "relax", label: "Thư giãn", icon: "☕" },
+  { id: "late_night", label: "Đi khuya", icon: "🌙" },
 ] as const;
 
-export const exploreDistricts = ["Quận 1", "Quận 3", "Bình Thạnh"] as const;
-
-export type ExploreDistrict = (typeof exploreDistricts)[number];
 export type PurposeId = (typeof purposes)[number]["id"];
 export type ExploreDayType = "weekday" | "friday" | "weekend";
 export type ExplorePriceLevel = 1 | 2 | 3 | 4;
@@ -47,7 +44,7 @@ export type ExploreSourcePlace = Readonly<{
   address: string;
   amenities: readonly string[];
   currency: string;
-  district: ExploreDistrict;
+  district: string;
   estimatedCapacity: number | null;
   id: string;
   latitude: number;
@@ -59,10 +56,25 @@ export type ExploreSourcePlace = Readonly<{
   }>;
   name: string;
   priceLevel: ExplorePriceLevel | null;
+  serviceAreaCode: string;
+  serviceAreaName: string;
   sizeCategory: ExploreSizeCategory;
   slug: string;
   typicalSpendMax: number | null;
   typicalSpendMin: number | null;
+}>;
+
+export type ExploreServiceArea = Readonly<{
+  areaType: string;
+  bounds: Readonly<{
+    east: number;
+    north: number;
+    south: number;
+    west: number;
+  }>;
+  code: string;
+  displayName: string;
+  placeCount: number;
 }>;
 
 export type ExploreCommunityReport = Readonly<{

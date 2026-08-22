@@ -71,6 +71,13 @@
       "when": 1786871551757,
       "tag": "0009_organic_human_fly",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786936811403,
+      "tag": "0010_sharp_dragon_lord",
+      "breakpoints": true
     }
   ]
 }

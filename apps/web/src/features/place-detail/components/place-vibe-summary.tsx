@@ -1,161 +1,183 @@
-import type { VibeSnapshotApiItem } from "@chon/contracts/backend";
+import type { VibeDimension } from "@chon/domain/explore-contract";
 
-const timeBucketLabels: Readonly<
-  Record<VibeSnapshotApiItem["timeBucket"], string>
-> = {
-  morning: "Sáng",
-  midday: "Trưa",
-  afternoon: "Chiều",
-  evening: "Tối",
-  late: "Khuya",
-};
+import type {
+  PlaceDetailIntent,
+  PlaceVibePresentation,
+} from "../domain/place-vibe-presentation";
 
-const vibeLabels = {
-  crowd: "Đông",
-  lighting: "Ánh sáng",
-  noise: "Ồn",
-  privacy: "Riêng tư",
-  socialEnergy: "Sôi động",
-  workability: "Làm việc",
-} as const;
-
-const dimensions = [
+const dimensions: readonly VibeDimension[] = [
   "noise",
   "crowd",
   "lighting",
   "privacy",
   "workability",
   "socialEnergy",
-] as const;
+];
 
-function confidenceLabel(
-  confidence: VibeSnapshotApiItem["confidence"]["level"],
-): string {
-  if (confidence === "high") return "Tin cậy cao";
-  if (confidence === "medium") return "Tin cậy trung bình";
+const vibeLabels: Readonly<Record<VibeDimension, string>> = {
+  crowd: "Độ đông",
+  lighting: "Ánh sáng",
+  noise: "Độ ồn",
+  privacy: "Riêng tư",
+  socialEnergy: "Nhịp không gian",
+  workability: "Làm việc",
+};
+
+const valueLabels: Readonly<
+  Record<VibeDimension, readonly [string, string, string, string, string]>
+> = {
+  crowd: ["Rất vắng", "Khá vắng", "Vừa phải", "Khá đông", "Rất đông"],
+  lighting: ["Rất dịu", "Khá dịu", "Cân bằng", "Khá sáng", "Rất sáng"],
+  noise: ["Rất yên", "Khá yên", "Vừa phải", "Khá ồn", "Rất ồn"],
+  privacy: ["Rất mở", "Khá mở", "Vừa đủ", "Khá riêng", "Rất riêng"],
+  socialEnergy: [
+    "Rất trầm",
+    "Khá trầm",
+    "Cân bằng",
+    "Sôi động",
+    "Rất sôi động",
+  ],
+  workability: ["Không hợp", "Hạn chế", "Ngắn hạn", "Khá hợp", "Rất hợp"],
+};
+
+function confidenceLabel(level: "low" | "medium" | "high"): string {
+  if (level === "high") return "Độ tin cậy cao";
+  if (level === "medium") return "Độ tin cậy trung bình";
   return "Dữ liệu còn ít";
 }
 
-function selectPlaceSnapshots(
-  snapshots: readonly VibeSnapshotApiItem[],
-): readonly VibeSnapshotApiItem[] {
-  const byTimeBucket = new Map<
-    VibeSnapshotApiItem["timeBucket"],
-    VibeSnapshotApiItem
-  >();
-  for (const snapshot of snapshots) {
-    if (snapshot.placeAreaId !== null) continue;
-    const current = byTimeBucket.get(snapshot.timeBucket);
-    if (!current || snapshot.dayType === "weekday") {
-      byTimeBucket.set(snapshot.timeBucket, snapshot);
-    }
-  }
+function evidenceLabel(presentation: PlaceVibePresentation): string {
+  const snapshot = presentation.snapshot;
+  if (!snapshot) return "Chưa có đủ bằng chứng trong khung giờ này.";
 
-  const orderedTimeBuckets: readonly VibeSnapshotApiItem["timeBucket"][] = [
-    "morning",
-    "midday",
-    "afternoon",
-    "evening",
-    "late",
-  ];
-  return orderedTimeBuckets
-    .map((timeBucket) => byTimeBucket.get(timeBucket))
-    .filter(
-      (snapshot): snapshot is VibeSnapshotApiItem => snapshot !== undefined,
-    );
-}
-
-function evidenceLabel(snapshot: VibeSnapshotApiItem): string {
   const parts: string[] = [];
   if (snapshot.reportCount > 0) {
     parts.push(
-      `${snapshot.reportCount} ${snapshot.isSimulated ? "góp ý mô phỏng" : "góp ý"}`,
+      `${snapshot.reportCount} ${snapshot.isSimulated ? "góp ý mô phỏng" : "góp ý cộng đồng"}`,
     );
   }
   if (snapshot.providerSignalCount > 0) {
     parts.push(`${snapshot.providerSignalCount} nguồn bổ trợ`);
   }
-  return parts.length > 0 ? parts.join(" · ") : "Chưa có đủ bằng chứng";
+  return parts.length > 0
+    ? `Dựa trên ${parts.join(" và ")} cùng khung giờ.`
+    : "Chưa có đủ bằng chứng trong khung giờ này.";
+}
+
+function scoreLabel(dimension: VibeDimension, score: number): string {
+  const index = Math.max(1, Math.min(5, Math.round(score))) - 1;
+  return valueLabels[dimension][index];
 }
 
 export function PlaceVibeSummary({
   error = false,
-  snapshots,
+  intent,
+  presentation,
 }: Readonly<{
   error?: boolean;
-  snapshots: readonly VibeSnapshotApiItem[];
+  intent: PlaceDetailIntent;
+  presentation: PlaceVibePresentation;
 }>) {
-  const placeSnapshots = selectPlaceSnapshots(snapshots);
+  const snapshot = presentation.snapshot;
+  const availableDimensions = dimensions.filter(
+    (dimension) => presentation.availableScores[dimension] !== undefined,
+  );
 
   return (
-    <section
-      aria-labelledby="place-vibe-title"
-      className="rounded-[1.5rem] border border-[#173f33]/10 bg-white/75 p-5 shadow-sm"
-    >
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 id="place-vibe-title" className="text-lg font-bold">
-            Chốn vibe
-          </h2>
-          <p className="mt-1 text-sm text-[#6b7d74]">
-            Một kết quả tổng hợp theo khung giờ, không hiển thị điểm provider
-            riêng lẻ.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div
+        className={`grid gap-1 rounded-2xl px-4 py-3 text-sm ${
+          snapshot?.confidence.level === "low" || !snapshot
+            ? "bg-[#f7eee0] text-[#8b5a2b]"
+            : "bg-[#dfece3] text-[#315d50]"
+        }`}
+      >
+        <strong>
+          {snapshot
+            ? confidenceLabel(snapshot.confidence.level)
+            : "Chưa có độ tin cậy"}
+        </strong>
+        <span>{evidenceLabel(presentation)}</span>
+        {snapshot && presentation.coverage < dimensions.length && (
+          <span>{`${presentation.coverage}/6 chiều · đánh giá tạm thời`}</span>
+        )}
       </div>
 
-      {error ? (
-        <p className="mt-4 rounded-xl bg-[#f7eee0] p-4 text-sm leading-6 text-[#8b5a2b]">
-          Chưa thể tải dữ liệu vibe. Thông tin địa điểm vẫn được hiển thị.
-        </p>
-      ) : placeSnapshots.length === 0 ? (
-        <p className="mt-4 rounded-xl bg-[#f7eee0] p-4 text-sm leading-6 text-[#8b5a2b]">
-          Chưa đủ dữ liệu vibe cho địa điểm này.
-        </p>
-      ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {placeSnapshots.map((snapshot) => (
-            <article
-              aria-labelledby={`place-vibe-${snapshot.timeBucket}-title`}
-              className="rounded-xl border border-[#173f33]/10 bg-[#f8f3e8] p-4"
-              key={`${snapshot.dayType}-${snapshot.timeBucket}`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <h3
-                  id={`place-vibe-${snapshot.timeBucket}-title`}
-                  className="font-bold"
-                >
-                  {timeBucketLabels[snapshot.timeBucket]}
-                </h3>
-                <span className="rounded-full bg-[#e9eddc] px-2 py-1 text-xs font-bold text-[#315d50]">
-                  {confidenceLabel(snapshot.confidence.level)}
+      <section aria-labelledby="place-fit-reasons-title">
+        <h2 className="text-xl font-extrabold" id="place-fit-reasons-title">
+          {`Vì sao phù hợp với ${intent.purposeLabel.toLocaleLowerCase("vi-VN")}?`}
+        </h2>
+        {presentation.explanation.reasons.length > 0 ? (
+          <ul className="mt-3 grid gap-2 text-sm text-[#5e746a]">
+            {presentation.explanation.reasons.map((reason) => (
+              <li className="flex gap-3" key={reason}>
+                <span aria-hidden="true" className="font-black text-[#426b57]">
+                  ✓
                 </span>
-              </div>
-              <p className="mt-2 text-xs font-semibold text-[#6b7d74]">
-                {evidenceLabel(snapshot)}
-              </p>
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                {dimensions.map((dimension) => {
-                  const score = snapshot.scores[dimension];
-                  return (
-                    <div
-                      className="flex items-center justify-between gap-2 rounded-lg bg-white/75 px-2.5 py-2"
-                      key={dimension}
-                    >
-                      <dt className="text-[#5e746a]">
-                        {vibeLabels[dimension]}
-                      </dt>
-                      <dd className="font-bold text-[#18352d]">
-                        {score === null ? "Chưa có" : `${score.toFixed(1)}/5`}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            </article>
-          ))}
+                <span>{reason}</span>
+              </li>
+            ))}
+            {presentation.explanation.cautions.map((caution) => (
+              <li className="flex gap-3 text-[#8b5a2b]" key={caution}>
+                <span aria-hidden="true" className="font-black">
+                  !
+                </span>
+                <span>{caution}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 rounded-xl bg-[#f7eee0] p-4 text-sm leading-6 text-[#8b5a2b]">
+            {error
+              ? "Chưa thể tải dữ liệu vibe. Thông tin địa điểm vẫn được hiển thị."
+              : "Chưa đủ dữ liệu vibe để giải thích mức độ phù hợp."}
+          </p>
+        )}
+      </section>
+
+      <section aria-labelledby="place-vibe-title">
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="text-xl font-extrabold" id="place-vibe-title">
+            Vibe lúc bạn định ghé
+          </h2>
+          <span className="shrink-0 text-sm text-[#756c63]">
+            {intent.timeLabel}
+          </span>
         </div>
-      )}
-    </section>
+
+        {availableDimensions.length > 0 ? (
+          <dl className="mt-4 grid gap-3">
+            {availableDimensions.map((dimension) => {
+              const score = presentation.availableScores[dimension];
+              if (score === undefined) return null;
+              return (
+                <div
+                  className="grid grid-cols-[6.5rem_minmax(0,1fr)_5.5rem] items-center gap-2 text-xs sm:grid-cols-[7.5rem_minmax(0,1fr)_6rem] sm:text-sm"
+                  key={dimension}
+                >
+                  <dt>{vibeLabels[dimension]}</dt>
+                  <dd
+                    aria-label={`${vibeLabels[dimension]}: ${score.toFixed(1)} trên 5`}
+                    className="h-2 overflow-hidden rounded-full bg-[#eee6da]"
+                  >
+                    <span
+                      className="block h-full rounded-full bg-[#c96040]"
+                      style={{ width: `${score * 20}%` }}
+                    />
+                  </dd>
+                  <dd className="text-right text-[#756c63]">
+                    {scoreLabel(dimension, score)}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        ) : (
+          <p className="mt-4 rounded-xl bg-[#f7eee0] p-4 text-sm leading-6 text-[#8b5a2b]">
+            Chưa đủ dữ liệu vibe trong khung giờ này.
+          </p>
+        )}
+      </section>
+    </div>
   );
 }

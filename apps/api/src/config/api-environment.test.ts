@@ -23,6 +23,12 @@ describe("API environment", () => {
     expect(environment.EXPLORE_INCLUDE_REAL_PLACES).toBe(false);
     expect(environment.EXPLORE_PLACE_DATA_MODE).toBe("synthetic");
     expect(environment.EXPLORE_PLACE_METADATA_MODE).toBe("synthetic");
+    expect(environment.AUTH_API_ISSUER).toBe("chon-web");
+    expect(environment.AUTH_API_AUDIENCE).toBe("chon-api");
+    expect(environment.AUTH_API_SECRET).toContain("dev-only");
+    expect(environment.VIBE_REPORT_LIMIT_10_MINUTES).toBe(3);
+    expect(environment.VIBE_REPORT_LIMIT_24_HOURS).toBe(10);
+    expect(environment.VIBE_REPORT_PLACE_COOLDOWN_MINUTES).toBe(360);
   });
 
   it("parses the real-place Explore rollout flag", () => {
@@ -68,6 +74,27 @@ describe("API environment", () => {
         NODE_ENV: "production",
       }),
     ).toThrow();
+  });
+
+  it("rejects the default assertion secret in production", () => {
+    expect(() =>
+      validateApiEnvironment({
+        ...databaseEnvironment,
+        API_CORS_ORIGINS: "https://chon.example",
+        API_HOST: "0.0.0.0",
+        API_PORT: "8080",
+        AUTH_API_AUDIENCE: "chon-api",
+        AUTH_API_ISSUER: "chon-web",
+        AUTH_API_SECRET: "dev-only-change-this-auth-api-secret-32chars",
+        DATA_IMPORT_TARGET_ENVIRONMENT: "production",
+        DATABASE_SSL: "true",
+        DATABASE_PASSWORD: "production-password",
+        EXPLORE_PLACE_DATA_MODE: "real",
+        EXPLORE_PLACE_METADATA_MODE: "real",
+        EXPLORE_INCLUDE_REAL_PLACES: "true",
+        NODE_ENV: "production",
+      }),
+    ).toThrow("Production requires a non-default AUTH_API_SECRET");
   });
 
   it("rejects wildcard CORS configuration", () => {

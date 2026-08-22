@@ -7,11 +7,16 @@ import { useState } from "react";
 import type { PlaceDetailMedia } from "../domain/place-detail";
 
 type PlaceGalleryProps = Readonly<{
+  matchScore?: number | null;
   media: readonly PlaceDetailMedia[];
   placeName: string;
 }>;
 
-export function PlaceGallery({ media, placeName }: PlaceGalleryProps) {
+export function PlaceGallery({
+  matchScore = null,
+  media,
+  placeName,
+}: PlaceGalleryProps) {
   const [selectedId, setSelectedId] = useState(media[0]?.id ?? null);
   const selected = media.find(({ id }) => id === selectedId) ?? media[0];
 
@@ -19,13 +24,13 @@ export function PlaceGallery({ media, placeName }: PlaceGalleryProps) {
     return (
       <section
         aria-label={`Hình ảnh của ${placeName}`}
-        className="grid min-h-72 place-items-center rounded-[2rem] border border-dashed border-[#173f33]/20 bg-[#e8eadc] p-8 text-center"
+        className="grid min-h-56 place-items-center rounded-3xl border border-dashed border-[#c96040]/25 bg-[#f5ddd3] p-6 text-center sm:min-h-72 sm:p-8"
       >
         <div className="max-w-sm">
           <span aria-hidden="true" className="text-4xl">
             ◌
           </span>
-          <h2 className="mt-3 text-lg font-bold text-[#173f33]">
+          <h2 className="mt-3 text-lg font-bold text-[#963f2a]">
             Chưa có ảnh đã xác minh
           </h2>
           <p className="mt-2 text-sm leading-6 text-[#5e746a]">
@@ -48,7 +53,7 @@ export function PlaceGallery({ media, placeName }: PlaceGalleryProps) {
 
   return (
     <section aria-label={`Hình ảnh của ${placeName}`}>
-      <figure className="overflow-hidden rounded-[2rem] bg-[#d9ddc7] shadow-sm">
+      <figure className="overflow-hidden rounded-3xl bg-[#d9ddc7] shadow-sm">
         <div className="relative aspect-[3/2] overflow-hidden">
           <img
             alt={selected.altText}
@@ -60,15 +65,20 @@ export function PlaceGallery({ media, placeName }: PlaceGalleryProps) {
             width={selected.width}
           />
           {selected.isSimulated && (
-            <span className="absolute top-4 left-4 rounded-full bg-[#173f33]/90 px-3 py-1.5 text-xs font-bold text-white shadow-sm backdrop-blur">
+            <span className="absolute top-4 left-4 rounded-full bg-[#963f2a]/90 px-3 py-1.5 text-xs font-bold text-white shadow-sm backdrop-blur">
               Ảnh minh họa giả lập
+            </span>
+          )}
+          {matchScore !== null && (
+            <span className="absolute right-4 bottom-4 rounded-full bg-[#fffdf9]/95 px-3 py-1.5 text-xs font-extrabold text-[#28231f] shadow-sm backdrop-blur">
+              {matchScore}% phù hợp
             </span>
           )}
           {media.length > 1 && (
             <>
               <button
                 aria-label="Ảnh trước"
-                className="absolute top-1/2 left-3 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-[#173f33]/90 text-3xl leading-none text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-[#173f33] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#f4c96b]"
+                className="absolute top-1/2 left-3 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-[#963f2a]/90 text-3xl leading-none text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-[#963f2a] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
                 onClick={() => selectRelativeImage(-1)}
                 type="button"
               >
@@ -76,7 +86,7 @@ export function PlaceGallery({ media, placeName }: PlaceGalleryProps) {
               </button>
               <button
                 aria-label="Ảnh tiếp theo"
-                className="absolute top-1/2 right-3 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-[#173f33]/90 text-3xl leading-none text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-[#173f33] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#f4c96b]"
+                className="absolute top-1/2 right-3 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-[#963f2a]/90 text-3xl leading-none text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-[#963f2a] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040]"
                 onClick={() => selectRelativeImage(1)}
                 type="button"
               >
@@ -84,14 +94,14 @@ export function PlaceGallery({ media, placeName }: PlaceGalleryProps) {
               </button>
               <span
                 aria-live="polite"
-                className="absolute right-4 bottom-4 rounded-full bg-black/65 px-3 py-1 text-xs font-bold text-white backdrop-blur"
+                className={`absolute bottom-4 rounded-full bg-black/65 px-3 py-1 text-xs font-bold text-white backdrop-blur ${matchScore === null ? "right-4" : "left-4"}`}
               >
                 {selectedIndex + 1} / {media.length}
               </span>
             </>
           )}
         </div>
-        <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-white/90 px-4 py-3 text-xs text-[#5e746a]">
+        <figcaption className="flex flex-wrap items-center justify-between gap-2 bg-white/90 px-4 py-2.5 text-xs text-[#5e746a]">
           <span>{selected.altText}</span>
           <span className="font-semibold text-[#315d50]">
             Nguồn: {selected.sourceLabel}
@@ -102,16 +112,16 @@ export function PlaceGallery({ media, placeName }: PlaceGalleryProps) {
       {media.length > 1 && (
         <div
           aria-label="Chọn ảnh xem trước"
-          className="mt-3 grid grid-cols-5 gap-2"
+          className="mt-2 grid grid-cols-5 gap-1.5 sm:gap-2"
           role="group"
         >
           {media.map((item, index) => (
             <button
               aria-label={`Xem ảnh ${index + 1}: ${item.altText}`}
               aria-pressed={item.id === selected.id}
-              className={`aspect-[3/2] overflow-hidden rounded-xl border-2 bg-[#d9ddc7] transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c59635] ${
+              className={`aspect-[1.35] overflow-hidden rounded-lg border-2 bg-[#eee6da] transition focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] ${
                 item.id === selected.id
-                  ? "border-[#c59635] shadow-md"
+                  ? "border-[#c96040] shadow-md"
                   : "border-transparent opacity-75 hover:opacity-100"
               }`}
               key={item.id}

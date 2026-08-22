@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { NormalizedPoi } from "../types";
+import { arePotentialDuplicatePlaces } from "../../../data-pipeline/place-identity";
 
 export type VietmapSyncArea = Readonly<{
   code: string;
@@ -111,32 +112,6 @@ function sourceRow(poi: NormalizedPoi): Record<string, string> {
   };
 }
 
-function normalizedName(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replaceAll("đ", "d")
-    .replaceAll("Đ", "D")
-    .toLocaleLowerCase("vi")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function distanceMeters(left: NormalizedPoi, right: NormalizedPoi): number {
-  const earthRadius = 6_371_000;
-  const radians = (degrees: number) => (degrees * Math.PI) / 180;
-  const latitudeDelta = radians(right.latitude - left.latitude);
-  const longitudeDelta = radians(right.longitude - left.longitude);
-  const leftLatitude = radians(left.latitude);
-  const rightLatitude = radians(right.latitude);
-  const a =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(leftLatitude) *
-      Math.cos(rightLatitude) *
-      Math.sin(longitudeDelta / 2) ** 2;
-  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 /**
  * Convert deduplicated live VIETMAP results into the normalized CSV contract
  * consumed by the guarded importer. Provider payloads never become synthetic
@@ -160,13 +135,10 @@ export function createVietmapImportRows(
     left.poi.providerPlaceId.localeCompare(right.poi.providerPlaceId),
   );
   const deduplicated = ordered.filter((candidate, index) => {
-    const candidateName = normalizedName(candidate.poi.name);
     return !ordered
       .slice(0, index)
       .some(
-        (previous) =>
-          normalizedName(previous.poi.name) === candidateName &&
-          distanceMeters(previous.poi, candidate.poi) <= 30,
+        (previous) => arePotentialDuplicatePlaces(previous.poi, candidate.poi),
       );
   });
 

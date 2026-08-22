@@ -30,6 +30,14 @@ BACKEND_API_URL=http://127.0.0.1:3001
 BACKEND_API_TIMEOUT_MS=5000
 NEXT_PUBLIC_MAPTILER_API_KEY=your_browser_key
 NEXT_PUBLIC_MAPTILER_STYLE_ID=streets-v4
+
+AUTH_SECRET=generate-a-long-random-secret
+AUTH_TRUST_HOST=false
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+AUTH_API_SECRET=dev-only-change-this-auth-api-secret-32chars
+AUTH_API_ISSUER=chon-web
+AUTH_API_AUDIENCE=chon-api
 ```
 
 Không đặt database credential hoặc provider token trong file này.
@@ -79,3 +87,21 @@ database credentials and provider tokens belong exclusively to `apps/api/.env`.
 Explore đồng bộ bộ lọc vào URL và có nút `Chia sẻ bộ lọc`. Analytics dùng
 anonymous session ID, chỉ gửi context đã chuẩn hóa qua same-origin
 `/api/analytics/events`; không gửi tọa độ hoặc raw report text.
+
+Bộ lọc quy mô, tiện ích và giá chỉ là trạng thái đang chọn cho đến khi người
+dùng bấm `Áp dụng bộ lọc`. Khi xác nhận, browser gọi same-origin
+`/api/explore/simulated`; Next.js proxy chuyển tiếp truy vấn metadata tới NestJS
+để lấy dataset mới, sau đó Explore cập nhật ranking và URL canonical.
+
+Selector khu vực đọc động từ `GET /v1/explore/service-areas`. Explore lọc POI
+theo `place_service_areas` primary và dùng boundary bounds để fit bản đồ; không
+còn allowlist Quận 1, Quận 3 và Bình Thạnh trong source code.
+
+Auth.js Google OAuth dùng các route `/api/auth/*`. `AUTH_API_SECRET` là secret
+server-only phải trùng với API để proxy `/api/auth/me` tạo assertion ngắn hạn;
+không dùng prefix `NEXT_PUBLIC_` cho secret này. Xem callback URL và security
+boundary tại [Authentication](../../docs/authentication.md).
+
+Place Detail có flow `Góp vibe` ba bước cho user đã đăng nhập; report đi qua
+same-origin proxy `/api/places/:slug/vibe-reports` và chờ moderation trước khi
+ảnh hưởng đến snapshot.

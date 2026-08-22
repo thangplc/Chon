@@ -32,6 +32,9 @@ DATABASE_HOST=127.0.0.1
 DATABASE_PORT=5432
 API_PORT=3001
 API_CORS_ORIGINS=http://localhost:3000
+AUTH_API_SECRET=dev-only-change-this-auth-api-secret-32chars
+AUTH_API_ISSUER=chon-web
+AUTH_API_AUDIENCE=chon-api
 DATA_IMPORT_TARGET_ENVIRONMENT=local
 EXPLORE_PLACE_DATA_MODE=synthetic
 ```
@@ -110,11 +113,15 @@ volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:d
 ## Endpoints
 
 - `GET /v1/health`
+- `GET /v1/auth/me` (requires a signed server assertion)
+- `POST /v1/places/:slug/vibe-reports` (requires authentication; starts in `pending` moderation)
 - `GET /v1/places?bbox=west,south,east,north&limit=50`
 - `GET /v1/places?lat=10.775&lng=106.700&radius=1500&limit=50`
 - `GET /v1/places/:slug`
 - `GET /v1/places/:slug/vibe?day_type=weekday&time_bucket=morning&area_id=<uuid>`
 - `GET /v1/explore/simulated`
+- `GET /v1/explore/service-areas` (active areas, current boundary bounds and primary POI count)
+- `GET /v1/explore/simulated?size=small,medium&amenities=Wi-Fi&price_levels=2&price_range=50-100`
 - `POST /v1/analytics/events`
 - `GET /openapi.json`
 - `GET /docs`
@@ -186,11 +193,13 @@ pnpm vietmap:poi:spike --live \
 
 # Live sync vào importer guarded; dry-run không ghi database
 VIETMAP_POI_MAX_REQUESTS=500 \
+VIETMAP_POI_REQUEST_INTERVAL_MS=500 \
 pnpm vietmap:poi:sync --areas hcm-q1,hcm-q3,hcm-binh-thanh \
   --category 1001-1 --dry-run
 
 # Sync thật vào môi trường đã khai báo trong DATA_IMPORT_TARGET_ENVIRONMENT
 VIETMAP_POI_MAX_REQUESTS=500 \
+VIETMAP_POI_REQUEST_INTERVAL_MS=500 \
 pnpm vietmap:poi:sync --areas hcm-q1,hcm-q3,hcm-binh-thanh \
   --category 1001-1 --environment local
 ```
@@ -206,8 +215,8 @@ district hiển thị được xác định theo boundary thực tế của tọ
 tâm search. Production còn yêu cầu
 `VIETMAP_POI_PRODUCTION_READY=true` ngoài các guard môi
 trường/import hiện có. `VIETMAP_POI_MAX_REQUESTS` tính cả Search, Place,
-Reverse và retry cho lỗi 429/5xx. Reverse chạy với concurrency giới hạn để
-tránh burst request.
+Reverse và retry cho lỗi 429/5xx. Mọi request được tuần tự hóa và cách nhau theo
+`VIETMAP_POI_REQUEST_INTERVAL_MS` (mặc định 500 ms) để tránh burst request.
 Production vẫn bị khóa bởi credential, category cafe, quota, terms, attribution
 và coverage gate.
 Chi tiết nằm trong [VIETMAP POI integration plan](../../docs/vietmap-poi-integration-plan.md).

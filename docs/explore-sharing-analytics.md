@@ -2,15 +2,21 @@
 
 ## URL chia sẻ
 
-Explore đồng bộ bộ lọc vào query string canonical bằng
-`history.replaceState`, nên đổi bộ lọc không reload trang. Các tham số hiện
-được hỗ trợ:
+Explore đồng bộ bộ lọc đã áp dụng vào query string canonical bằng
+`history.replaceState`, nên đổi bộ lọc không reload trang. Các control metadata
+chỉ là trạng thái đang chọn cho đến khi người dùng bấm `Áp dụng bộ lọc`; lúc đó
+frontend gọi `/api/explore/simulated` và chỉ cập nhật URL sau khi API thành công.
+Các tham số hiện được hỗ trợ:
 
 ```text
 purpose, date, time, duration
-district=q1|q3|binh_thanh
+area=<service-area-code>
 q, size, amenities, price_levels, price_range
 ```
+
+`district=q1|q3|binh_thanh` vẫn được đọc để tương thích link cũ, nhưng URL mới
+luôn được canonicalize sang `area=hcm-q1|hcm-q3|hcm-binh-thanh`. Danh sách mã
+khu vực không hard-code ở frontend mà lấy từ service area active trong DB.
 
 Khi mở lại URL, frontend hydrate các bộ lọc và tìm các địa điểm phù hợp với
 `q` trong dataset hiện tại. Tọa độ vị trí hiện tại/chọn trên bản đồ không được

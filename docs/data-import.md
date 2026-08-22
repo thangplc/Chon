@@ -148,16 +148,25 @@ không suy diễn sai. Xem thêm [API OSM enrichment guide](../apps/api/README.m
 
 ## Boundary
 
-Ba service area MVP được khai báo tập trung trong
+Các service area được khai báo tập trung trong
 `apps/api/src/data-pipeline/service-area-boundaries.ts`:
 
 | Service area | OSM relation | Storage key |
 |---|---:|---|
 | Quận 1 | `2587287` | `boundaries/osm/hcm-q1/v1/boundary.geojson` |
-| Quận 3 | `3819816` | `boundaries/osm/hcm-q3/v1/boundary.geojson` |
-| Bình Thạnh | `3797166` | `boundaries/osm/hcm-binh-thanh/v1/boundary.geojson` |
+| Quận 3 | `3819816` | `boundaries/osm/hcm-q3/v2/boundary.geojson` |
+| Bình Thạnh | `3797166` | `boundaries/osm/hcm-binh-thanh/v2/boundary.geojson` |
+| Phường Quy Nhơn | `19372380` | `boundaries/osm/gia-lai-quy-nhon/v1/boundary.geojson` |
+| Phường Quy Nhơn Đông | `19372378` | `boundaries/osm/gia-lai-quy-nhon-dong/v1/boundary.geojson` |
+| Phường Quy Nhơn Tây | `19372376` | `boundaries/osm/gia-lai-quy-nhon-tay/v1/boundary.geojson` |
+| Phường Quy Nhơn Nam | `19372377` | `boundaries/osm/gia-lai-quy-nhon-nam/v1/boundary.geojson` |
+| Phường Quy Nhơn Bắc | `19372379` | `boundaries/osm/gia-lai-quy-nhon-bac/v1/boundary.geojson` |
 
 Từ ngày 01/07/2025, ba quận không còn là đơn vị hành chính hiện hành. OSM giữ các relation này với `type=historic` và `end_date=2025-06-30`. Chốn dùng chúng như **vùng phục vụ sản phẩm** đang active, đồng thời lưu `area_type=historic_district` để không diễn giải sai trạng thái hành chính.
+
+Boundary Quận 3 và Bình Thạnh hiện dùng version 2. Source object version 1 từng được import vào DB nhưng local mirror bị thiếu hoặc không còn khớp; snapshot tải lại có checksum/retrieval metadata mới nên được lưu thành version mới thay vì ghi đè version 1 bất biến.
+
+Năm phường Quy Nhơn được thành lập theo đơn vị hành chính mới và thuộc tỉnh Gia Lai. Danh sách được đối chiếu với [danh sách đơn vị hành chính cấp xã sau sắp xếp](https://xaydungchinhsach.chinhphu.vn/danh-sach-3321-don-vi-hanh-chinh-cap-xa-tai-34-tinh-thanh-sau-sap-xep-sap-nhap-119250710102358656.htm). Catalog lưu chúng với `area_type=ward`; boundary sync kiểm tra OSM `type=administrative` và `admin_level=6`. Mã khu vực dùng prefix `gia-lai-` thay vì phụ thuộc vào cấp thành phố đã kết thúc hoạt động trong mô hình chính quyền địa phương hai cấp. Xã Nhơn Châu không được thêm vì phạm vi thay đổi này chỉ bao gồm phường.
 
 Workflow local/staging:
 
@@ -165,7 +174,7 @@ Workflow local/staging:
 # Tải snapshot đã simplify từ Nominatim; lần sau reuse file cùng version.
 pnpm service-areas:sync
 
-# Validate cả ba source object, geometry và kế hoạch membership; không ghi DB.
+# Validate toàn bộ source object, geometry và kế hoạch membership; không ghi DB.
 pnpm service-areas:import --dry-run
 
 # Import atomically và kích hoạt current boundary.
@@ -175,7 +184,7 @@ pnpm service-areas:import
 pnpm service-areas:verify
 ```
 
-`service-areas:sync` dùng `polygon_threshold=0.00005` độ (xấp xỉ 5,5 m), kiểm tra relation/name/type/end date và tạo một manifest có checksum cho mỗi GeoJSON. Source object local nằm dưới `data/source-objects/<storage-key>` và bị loại khỏi Git. Nếu muốn cập nhật ranh giới, phải tăng `version` và đổi storage key trong catalog; script không ghi đè snapshot đã tồn tại.
+`service-areas:sync` dùng `polygon_threshold=0.00005` độ (xấp xỉ 5,5 m), kiểm tra relation/name/type và metadata theo loại boundary (`end_date` cho quận lịch sử, `admin_level` cho phường đang hoạt động), rồi tạo manifest có checksum cho mỗi GeoJSON. Source object local nằm dưới `data/source-objects/<storage-key>` và bị loại khỏi Git. Nếu muốn cập nhật ranh giới, phải tăng `version` và đổi storage key trong catalog; script không ghi đè snapshot đã tồn tại.
 
 Có thể gọi boundary importer cấp thấp cho một boundary riêng lẻ:
 
@@ -223,4 +232,4 @@ pnpm data:verify
 
 Integration verification chạy boundary → POI/provider mapping → place area → vibe report; kiểm tra spatial membership, provenance update, ownership conflict và idempotence, sau đó rollback toàn bộ dữ liệu test.
 
-`pnpm service-areas:verify` là verification dành riêng cho ba vùng MVP đang active. Command fail nếu source object khác checksum DB, provenance/version/geometry sai, membership khác kết quả `ST_Covers`, hoặc fixture mang nhãn quận mục tiêu không được cover đúng vùng.
+`pnpm service-areas:verify` kiểm tra mọi vùng trong catalog đang active. Command fail nếu source object khác checksum DB, provenance/version/geometry sai, membership khác kết quả `ST_Covers`, hoặc fixture mang nhãn quận mục tiêu không được cover đúng vùng.
