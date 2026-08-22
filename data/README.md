@@ -8,6 +8,7 @@ Thư mục này chứa dữ liệu phục vụ phát triển và các template t
 data/
   fixtures/
     places.csv
+    editorial-collections.csv
     place-metadata-overlays-real-demo.csv
     place-areas.csv
     place-media.csv
@@ -20,9 +21,13 @@ data/
     editorial-vibe-reports.csv
     community-vibe-reports.csv
     place-metadata-overlays.csv
+    editorial-collections.csv
 ```
 
-Toàn bộ địa điểm, khu vực trong quán, media và report trong `fixtures/` là hư cấu. Chúng chỉ dùng cho local, CI, staging và prototype. `places.csv` có dữ liệu giá, quy mô, sức chứa và lịch mở cửa thường lệ; `place-areas.csv` mô tả các khu vực con. Metadata media nằm trong `place-media.csv`; năm SVG minh họa nằm tại `apps/web/public/place-media/synthetic/` và không được trình bày như ảnh quán thật.
+Các fixture địa điểm, khu vực trong quán, media và report mô phỏng là hư cấu.
+Riêng `editorial-collections.csv` chỉ tham chiếu `internal_id` của POI VIETMAP
+thật đã import, không biến metadata hoặc vibe mô phỏng thành dữ liệu thật. File
+này tạo collection editorial đầu tiên trong môi trường local.
 
 Explore local dùng pipeline:
 
@@ -53,6 +58,16 @@ Kiểm tra toàn bộ fixture mà không ghi database:
 pnpm data:import seed --dir data/fixtures --environment local --dry-run
 pnpm data:import seed --dir data/fixtures --environment local
 ```
+
+Kiểm tra rồi import collection editorial (idempotent):
+
+```bash
+pnpm editorial:collections:import --file data/fixtures/editorial-collections.csv --environment local --dry-run
+pnpm editorial:collections:import --file data/fixtures/editorial-collections.csv --environment local
+```
+
+Importer chỉ nhận POI `published`, `is_simulated=false`; đồng bộ thứ tự và ghi
+chú theo CSV. Ghi production yêu cầu thêm `DATA_IMPORT_ALLOW_PRODUCTION=true`.
 
 ## Quy tắc an toàn
 

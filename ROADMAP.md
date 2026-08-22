@@ -137,9 +137,11 @@ Beta user gửi report trong dưới 15 giây và thấy dữ liệu địa đi�
 
 - [x] Lưu địa điểm — collection private mặc định, API idempotent theo identity,
   trạng thái lưu trên Explore/Place Detail và trang `/saved`.
-- [ ] Tạo collection public/private.
-- [ ] Trang collection có metadata chia sẻ đẹp.
-- [ ] Collection editorial đầu tiên.
+- [x] Tạo collection public/private — owner CRUD, collection picker, URL public
+  ổn định và chặn truy cập collection private ngoài owner.
+- [x] Trang collection có metadata chia sẻ đẹp — server-rendered public page,
+  canonical, Open Graph/Twitter metadata và preview image động.
+- [x] Collection editorial đầu tiên.
 - [ ] Event analytics cho save, share và open directions.
 
 ### Demo
