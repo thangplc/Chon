@@ -65,7 +65,7 @@ describe("VIETMAP import rows", () => {
     const rows = createVietmapImportRows([
       {
         area: { code: "hcm-q3", displayName: "Quận 3" },
-        poi: poi("vm-2", "B"),
+        poi: { ...poi("vm-2", "B"), latitude: 10.781 },
       },
       {
         area: { code: "hcm-q3", displayName: "Quận 3" },
@@ -115,6 +115,23 @@ describe("VIETMAP import rows", () => {
 
     expect(rows.places).toHaveLength(1);
     expect(rows.sources).toHaveLength(1);
+  });
+
+  it("deduplicates nearby provider variants using the importer threshold", () => {
+    const rows = createVietmapImportRows([
+      {
+        area: { code: "gia-lai-quy-nhon-dong", displayName: "Phường Quy Nhơn Đông" },
+        poi: poi("vm-variant-2", "Mộc Coffee Quy Nhơn"),
+      },
+      {
+        area: { code: "gia-lai-quy-nhon-dong", displayName: "Phường Quy Nhơn Đông" },
+        poi: poi("vm-variant-1", "Moc Coffee Quy Nhon"),
+      },
+    ]);
+
+    expect(rows.places).toHaveLength(1);
+    expect(rows.sources).toHaveLength(1);
+    expect(rows.sources[0].provider_place_id).toBe("vm-variant-1");
   });
 
   it("serializes CSV with escaped values and the strict headers", () => {

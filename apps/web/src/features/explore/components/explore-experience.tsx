@@ -13,11 +13,10 @@ import {
 import type { AnalyticsEventPayload } from "@chon/contracts/analytics";
 
 import {
-  exploreDistricts,
   purposes,
   type ExploreDataset,
   type ExploreDayType,
-  type ExploreDistrict,
+  type ExploreServiceArea,
   type ExplorePriceLevel,
   type ExploreSizeCategory,
   type PurposeId,
@@ -153,9 +152,9 @@ function areSetsEqual<T>(left: ReadonlySet<T>, right: ReadonlySet<T>): boolean {
 
 function locationModeLabel(
   mode: ExploreLocationMode,
-  district: "all" | ExploreDistrict,
+  serviceAreaName: string,
 ): string {
-  if (mode === "district") return district;
+  if (mode === "district") return serviceAreaName;
   if (mode === "search") return "Khu vực tìm kiếm";
   if (mode === "current") return "Vị trí hiện tại";
   if (mode === "map") return "Điểm trên bản đồ";
@@ -212,6 +211,7 @@ type ExploreExperienceProps = Readonly<{
   authControls?: ReactNode;
   dataset: ExploreDataset;
   mapStyleUrl: string | null;
+  serviceAreas?: readonly ExploreServiceArea[];
 }>;
 
 type ViewportQueryStatus = "idle" | "loading" | "ready" | "error";
@@ -254,7 +254,30 @@ export function ExploreExperience({
   authControls,
   dataset,
   mapStyleUrl,
+  serviceAreas = [],
 }: ExploreExperienceProps) {
+  const availableServiceAreas = useMemo<readonly ExploreServiceArea[]>(() => {
+    if (serviceAreas.length > 0) return serviceAreas;
+    const grouped = new Map<string, ExploreDataset["places"]>();
+    dataset.places.forEach((place) => {
+      grouped.set(place.serviceAreaCode, [
+        ...(grouped.get(place.serviceAreaCode) ?? []),
+        place,
+      ]);
+    });
+    return [...grouped.entries()].map(([code, areaPlaces]) => ({
+      areaType: "unknown",
+      bounds: {
+        east: Math.max(...areaPlaces.map(({ longitude }) => longitude)),
+        north: Math.max(...areaPlaces.map(({ latitude }) => latitude)),
+        south: Math.min(...areaPlaces.map(({ latitude }) => latitude)),
+        west: Math.min(...areaPlaces.map(({ longitude }) => longitude)),
+      },
+      code,
+      displayName: areaPlaces[0].serviceAreaName,
+      placeCount: areaPlaces.length,
+    }));
+  }, [dataset.places, serviceAreas]);
   const [activeDataset, setActiveDataset] = useState(dataset);
   const [purpose, setPurpose] = useState<PurposeId>("work");
   const [timeBucket, setTimeBucket] = useState<TimeBucket>("morning");
@@ -294,7 +317,7 @@ export function ExploreExperience({
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "error">(
     "idle",
   );
-  const [district, setDistrict] = useState<"all" | ExploreDistrict>("all");
+  const [serviceAreaCode, setServiceAreaCode] = useState<"all" | string>("all");
   const [locationMode, setLocationMode] = useState<ExploreLocationMode>("all");
   const [locationQuery, setLocationQuery] = useState("");
   const [locationPlaceIds, setLocationPlaceIds] =
@@ -402,7 +425,7 @@ export function ExploreExperience({
     () =>
       getExplorePlaces(activeDataset, {
         dayType,
-        district,
+        serviceAreaCode,
         placeIds: locationPlaceIds ?? undefined,
         amenities: appliedAmenities,
         priceLevels: appliedPriceLevels,
@@ -423,7 +446,7 @@ export function ExploreExperience({
       appliedPriceRangeId,
       appliedSizes,
       dayType,
-      district,
+      serviceAreaCode,
       locationPlaceIds,
       purpose,
       timeBucket,
@@ -475,7 +498,7 @@ export function ExploreExperience({
     () => ({
       amenities: [...appliedAmenities],
       dateValue,
-      district,
+      serviceAreaCode,
       durationMinutes,
       exactTime,
       locationQuery,
@@ -491,7 +514,7 @@ export function ExploreExperience({
       appliedPriceRangeId,
       appliedSizes,
       dateValue,
-      district,
+      serviceAreaCode,
       durationMinutes,
       exactTime,
       locationQuery,
@@ -507,7 +530,7 @@ export function ExploreExperience({
     () => ({
       amenityCount: appliedAmenities.size,
       dayType,
-      district: district === "all" ? null : district,
+      district: serviceAreaCode === "all" ? null : serviceAreaCode,
       durationMinutes,
       priceLevelCount: appliedPriceLevels.size,
       priceRangeId: urlState.priceRangeId,
@@ -521,7 +544,7 @@ export function ExploreExperience({
       appliedPriceLevels.size,
       appliedSizes.size,
       dayType,
-      district,
+      serviceAreaCode,
       durationMinutes,
       results.length,
       purpose,
@@ -670,7 +693,7 @@ export function ExploreExperience({
     ) => {
       setLocationCenter(center);
       setLocationMode(mode);
-      setDistrict("all");
+      setServiceAreaCode("all");
       setLocationQuery("");
       setLocationSelectionEnabled(false);
       clearSelectedPlace();
@@ -721,7 +744,7 @@ export function ExploreExperience({
         )
         .map(({ id }) => id);
       setLocationMode("search");
-      setDistrict("all");
+      setServiceAreaCode("all");
       setLocationCenter(null);
       setLocationSelectionEnabled(false);
       setLocationPlaceIds(new Set(matchingPlaceIds));
@@ -732,10 +755,10 @@ export function ExploreExperience({
     [activeDataset.places, clearSelectedPlace, locationQuery],
   );
 
-  const handleDistrictChange = useCallback(
-    (nextDistrict: "all" | ExploreDistrict) => {
-      setDistrict(nextDistrict);
-      setLocationMode(nextDistrict === "all" ? "all" : "district");
+  const handleServiceAreaChange = useCallback(
+    (nextServiceAreaCode: "all" | string) => {
+      setServiceAreaCode(nextServiceAreaCode);
+      setLocationMode(nextServiceAreaCode === "all" ? "all" : "district");
       setLocationPlaceIds(null);
       setLocationCenter(null);
       setLocationQuery("");
@@ -759,6 +782,11 @@ export function ExploreExperience({
 
     const fallback = createDefaultExploreUrlState(getTodayDateValue());
     const parsed = parseExploreUrlState(window.location.search, fallback);
+    const hydratedServiceAreaCode = availableServiceAreas.some(
+      ({ code }) => code === parsed.serviceAreaCode,
+    )
+      ? parsed.serviceAreaCode
+      : "all";
     const timeContext = getExploreTimeContext(
       parsed.dateValue,
       parsed.exactTime,
@@ -790,12 +818,12 @@ export function ExploreExperience({
     setAppliedAmenities(new Set(parsed.amenities));
     setAppliedPriceLevels(new Set(parsed.priceLevels));
     setAppliedPriceRangeId(parsed.priceRangeId);
-    setDistrict(parsed.district);
+    setServiceAreaCode(hydratedServiceAreaCode);
     setLocationQuery(parsed.locationQuery);
     setLocationMode(
       parsed.locationQuery
         ? "search"
-        : parsed.district === "all"
+        : hydratedServiceAreaCode === "all"
           ? "all"
           : "district",
     );
@@ -822,6 +850,7 @@ export function ExploreExperience({
   }, [
     clearSelectedPlace,
     activeDataset.places,
+    availableServiceAreas,
     openSelectionCard,
     updateSelectedPlaceId,
   ]);
@@ -871,7 +900,13 @@ export function ExploreExperience({
   const selectedTimeLabel = dateValue
     ? `${dateValue.split("-").reverse().join("/")} · ${exactTime} · ${formatDuration(durationMinutes)}`
     : `${timeOptions.find(({ id }) => id === timeBucket)?.label} · ${formatDuration(durationMinutes)}`;
-  const selectedLocationLabel = locationModeLabel(locationMode, district);
+  const selectedServiceArea = availableServiceAreas.find(
+    ({ code }) => code === serviceAreaCode,
+  );
+  const selectedLocationLabel = locationModeLabel(
+    locationMode,
+    selectedServiceArea?.displayName ?? "Tất cả khu vực",
+  );
   const resultRegionLabel =
     mapStyleUrl && viewportStatus === "ready"
       ? `${visibleResults.length} Chốn trong vùng bản đồ`
@@ -1123,16 +1158,14 @@ export function ExploreExperience({
                   aria-label="Khu vực"
                   className="chon-filter-control min-h-10 w-full rounded-xl border border-[#ddd2c3] bg-[#f7f2eb] px-3 outline-none focus:border-[#c96040]"
                   onChange={(event) =>
-                    handleDistrictChange(
-                      event.target.value as "all" | ExploreDistrict,
-                    )
+                    handleServiceAreaChange(event.target.value)
                   }
-                  value={district}
+                  value={serviceAreaCode}
                 >
                   <option value="all">Vị trí hiện tại / tất cả khu vực</option>
-                  {exploreDistricts.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
+                  {availableServiceAreas.map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {item.displayName} ({item.placeCount})
                     </option>
                   ))}
                 </select>
@@ -1603,15 +1636,20 @@ export function ExploreExperience({
                           </span>
                           {vibe && (
                             <span className="mt-2 flex flex-wrap gap-1">
-                              {highlightedDimensions.map((dimension) => (
-                                <span
-                                  className="chon-text-meta rounded-md bg-[#eee6da] px-1.5 py-1 text-[#756c63]"
-                                  key={dimension}
-                                >
-                                  {vibeLabels[dimension]}{" "}
-                                  {vibe[dimension].toFixed(1)}/5
-                                </span>
-                              ))}
+                              {highlightedDimensions
+                                .filter(
+                                  (dimension) =>
+                                    typeof vibe[dimension] === "number",
+                                )
+                                .map((dimension) => (
+                                  <span
+                                    className="chon-text-meta rounded-md bg-[#eee6da] px-1.5 py-1 text-[#756c63]"
+                                    key={dimension}
+                                  >
+                                    {vibeLabels[dimension]}{" "}
+                                    {(vibe[dimension] as number).toFixed(1)}/5
+                                  </span>
+                                ))}
                             </span>
                           )}
                           {!vibe && (
@@ -1698,6 +1736,7 @@ export function ExploreExperience({
             Bỏ qua bản đồ, đến danh sách địa điểm
           </a>
           <ExploreMap
+            focusBounds={selectedServiceArea?.bounds ?? null}
             locationSelectionEnabled={locationSelectionEnabled}
             mapStyleUrl={mapStyleUrl}
             onSelectLocation={handleMapLocationSelect}

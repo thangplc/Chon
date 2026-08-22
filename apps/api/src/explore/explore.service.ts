@@ -1,9 +1,8 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import {
-  exploreDistricts,
   type ExploreCommunityReport,
   type ExploreDataset,
-  type ExploreDistrict,
+  type ExploreServiceArea,
   type ExploreSourcePlace,
   type ExploreVibeSnapshot,
   type TimeBucket,
@@ -13,12 +12,19 @@ import {
   parsePlaceOpeningHours,
   parsePriceLevel,
 } from "../../../../packages/domain/src/place-detail/place-detail";
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 import type { ApiEnvironment } from "../config/api-environment";
 import { DATABASE } from "../database/database.constants";
 import type { ChonDatabase } from "../database/database.module";
-import { placeMetadataOverlays, places, vibeReports } from "../database/schema";
+import {
+  placeMetadataOverlays,
+  places,
+  placeServiceAreas,
+  serviceAreaBoundaries,
+  serviceAreas,
+  vibeReports,
+} from "../database/schema";
 import {
   type VibeSnapshotApiItem,
   VibeSnapshotsService,
@@ -61,6 +67,51 @@ export class ExploreService {
     private readonly vibeSnapshotsService: VibeSnapshotsService,
   ) {}
 
+  async listServiceAreas(): Promise<readonly ExploreServiceArea[]> {
+    const rows = await this.db
+      .select({
+        areaType: serviceAreas.areaType,
+        code: serviceAreas.code,
+        displayName: serviceAreas.displayName,
+        east: sql<number>`ST_XMax(Box3D(${serviceAreaBoundaries.boundary}))`,
+        north: sql<number>`ST_YMax(Box3D(${serviceAreaBoundaries.boundary}))`,
+        placeCount: count(placeServiceAreas.placeId),
+        south: sql<number>`ST_YMin(Box3D(${serviceAreaBoundaries.boundary}))`,
+        west: sql<number>`ST_XMin(Box3D(${serviceAreaBoundaries.boundary}))`,
+      })
+      .from(serviceAreas)
+      .innerJoin(
+        serviceAreaBoundaries,
+        and(
+          eq(serviceAreaBoundaries.serviceAreaId, serviceAreas.id),
+          eq(serviceAreaBoundaries.isCurrent, true),
+        ),
+      )
+      .leftJoin(
+        placeServiceAreas,
+        and(
+          eq(placeServiceAreas.serviceAreaId, serviceAreas.id),
+          eq(placeServiceAreas.isPrimary, true),
+        ),
+      )
+      .where(eq(serviceAreas.status, "active"))
+      .groupBy(serviceAreas.id, serviceAreaBoundaries.boundary)
+      .orderBy(serviceAreas.priority, serviceAreas.displayName);
+
+    return rows.map((row) => ({
+      areaType: row.areaType,
+      bounds: {
+        east: Number(row.east),
+        north: Number(row.north),
+        south: Number(row.south),
+        west: Number(row.west),
+      },
+      code: row.code,
+      displayName: row.displayName,
+      placeCount: Number(row.placeCount),
+    }));
+  }
+
   async getDataset(
     environment: ApiEnvironment["DATA_IMPORT_TARGET_ENVIRONMENT"],
     placeDataMode: ApiEnvironment["EXPLORE_PLACE_DATA_MODE"],
@@ -71,10 +122,7 @@ export class ExploreService {
       throw new NotFoundException();
     }
 
-    const placeConditions = [
-      eq(places.status, "published"),
-      inArray(places.district, exploreDistricts),
-    ];
+    const placeConditions = [eq(places.status, "published")];
     if (placeDataMode === "synthetic") {
       placeConditions.push(eq(places.isSimulated, true));
     } else if (placeDataMode === "real") {
@@ -83,7 +131,6 @@ export class ExploreService {
 
     const reportConditions = [
       eq(places.status, "published"),
-      inArray(places.district, exploreDistricts),
       eq(vibeReports.dataType, "community"),
       eq(vibeReports.moderationStatus, "approved"),
       isNotNull(vibeReports.timeBucket),
@@ -109,12 +156,28 @@ export class ExploreService {
           name: places.name,
           openingHours: places.openingHours,
           priceLevel: places.priceLevel,
+          serviceAreaCode: serviceAreas.code,
+          serviceAreaName: serviceAreas.displayName,
           sizeCategory: places.sizeCategory,
           slug: places.slug,
           typicalSpendMax: places.typicalSpendMax,
           typicalSpendMin: places.typicalSpendMin,
         })
         .from(places)
+        .innerJoin(
+          placeServiceAreas,
+          and(
+            eq(placeServiceAreas.placeId, places.id),
+            eq(placeServiceAreas.isPrimary, true),
+          ),
+        )
+        .innerJoin(
+          serviceAreas,
+          and(
+            eq(serviceAreas.id, placeServiceAreas.serviceAreaId),
+            eq(serviceAreas.status, "active"),
+          ),
+        )
         .where(and(...placeConditions))
         .orderBy(places.name),
       this.db
@@ -131,6 +194,20 @@ export class ExploreService {
         })
         .from(vibeReports)
         .innerJoin(places, eq(vibeReports.placeId, places.id))
+        .innerJoin(
+          placeServiceAreas,
+          and(
+            eq(placeServiceAreas.placeId, places.id),
+            eq(placeServiceAreas.isPrimary, true),
+          ),
+        )
+        .innerJoin(
+          serviceAreas,
+          and(
+            eq(serviceAreas.id, placeServiceAreas.serviceAreaId),
+            eq(serviceAreas.status, "active"),
+          ),
+        )
         .where(and(...reportConditions))
         .orderBy(vibeReports.visitedAt),
     ]);
@@ -205,7 +282,7 @@ export class ExploreService {
         address: row.address,
         amenities: resolved.amenities,
         currency: resolved.currency,
-        district: row.district as ExploreDistrict,
+        district: row.district,
         estimatedCapacity: resolved.estimatedCapacity,
         id: row.id,
         latitude: row.location.latitude,
@@ -213,6 +290,8 @@ export class ExploreService {
         metadata: resolved.metadata,
         name: row.name,
         priceLevel: resolved.priceLevel,
+        serviceAreaCode: row.serviceAreaCode,
+        serviceAreaName: row.serviceAreaName,
         sizeCategory: resolved.sizeCategory,
         slug: row.slug,
         typicalSpendMax: resolved.typicalSpendMax,

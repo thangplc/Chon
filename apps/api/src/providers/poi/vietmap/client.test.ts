@@ -9,6 +9,7 @@ function config() {
     VIETMAP_API_KEY: "secret",
     VIETMAP_POI_ENABLED: "true",
     VIETMAP_POI_MAX_REQUESTS: "1",
+    VIETMAP_POI_REQUEST_INTERVAL_MS: "0",
   });
 }
 
@@ -65,6 +66,45 @@ describe("VietmapPoiClient", () => {
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
+  it("retries HTTP 429 responses using Retry-After", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("rate limited", {
+            headers: { "retry-after": "0" },
+            status: 429,
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify([]), { status: 200 }),
+        );
+      const client = new VietmapPoiClient(
+        readVietmapPoiConfig({
+          VIETMAP_API_KEY: "secret",
+          VIETMAP_POI_ENABLED: "true",
+          VIETMAP_POI_MAX_REQUESTS: "5",
+          VIETMAP_POI_REQUEST_INTERVAL_MS: "0",
+        }),
+        fetcher,
+      );
+
+      const resultPromise = client.search({
+        latitude: 10.78,
+        longitude: 106.69,
+        radiusMeters: 750,
+        text: "cafe",
+      });
+      await vi.runAllTimersAsync();
+
+      await expect(resultPromise).resolves.toEqual([]);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("enriches live search results with coordinates from Place v4", async () => {
     const fetcher = vi.fn(async (input: URL) => {
       if (input.pathname.endsWith("/search/v4")) {
@@ -103,6 +143,7 @@ describe("VietmapPoiClient", () => {
         VIETMAP_API_KEY: "secret",
         VIETMAP_POI_ENABLED: "true",
         VIETMAP_POI_MAX_REQUESTS: "2",
+        VIETMAP_POI_REQUEST_INTERVAL_MS: "0",
       }),
       fetcher,
     );
@@ -170,6 +211,7 @@ describe("VietmapPoiClient", () => {
         VIETMAP_API_KEY: "secret",
         VIETMAP_POI_ENABLED: "true",
         VIETMAP_POI_MAX_REQUESTS: "2",
+        VIETMAP_POI_REQUEST_INTERVAL_MS: "0",
       }),
       fetcher,
     );

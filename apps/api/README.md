@@ -120,6 +120,7 @@ volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:d
 - `GET /v1/places/:slug`
 - `GET /v1/places/:slug/vibe?day_type=weekday&time_bucket=morning&area_id=<uuid>`
 - `GET /v1/explore/simulated`
+- `GET /v1/explore/service-areas` (active areas, current boundary bounds and primary POI count)
 - `GET /v1/explore/simulated?size=small,medium&amenities=Wi-Fi&price_levels=2&price_range=50-100`
 - `POST /v1/analytics/events`
 - `GET /openapi.json`
@@ -192,11 +193,13 @@ pnpm vietmap:poi:spike --live \
 
 # Live sync vào importer guarded; dry-run không ghi database
 VIETMAP_POI_MAX_REQUESTS=500 \
+VIETMAP_POI_REQUEST_INTERVAL_MS=500 \
 pnpm vietmap:poi:sync --areas hcm-q1,hcm-q3,hcm-binh-thanh \
   --category 1001-1 --dry-run
 
 # Sync thật vào môi trường đã khai báo trong DATA_IMPORT_TARGET_ENVIRONMENT
 VIETMAP_POI_MAX_REQUESTS=500 \
+VIETMAP_POI_REQUEST_INTERVAL_MS=500 \
 pnpm vietmap:poi:sync --areas hcm-q1,hcm-q3,hcm-binh-thanh \
   --category 1001-1 --environment local
 ```
@@ -212,8 +215,8 @@ district hiển thị được xác định theo boundary thực tế của tọ
 tâm search. Production còn yêu cầu
 `VIETMAP_POI_PRODUCTION_READY=true` ngoài các guard môi
 trường/import hiện có. `VIETMAP_POI_MAX_REQUESTS` tính cả Search, Place,
-Reverse và retry cho lỗi 429/5xx. Reverse chạy với concurrency giới hạn để
-tránh burst request.
+Reverse và retry cho lỗi 429/5xx. Mọi request được tuần tự hóa và cách nhau theo
+`VIETMAP_POI_REQUEST_INTERVAL_MS` (mặc định 500 ms) để tránh burst request.
 Production vẫn bị khóa bởi credential, category cafe, quota, terms, attribution
 và coverage gate.
 Chi tiết nằm trong [VIETMAP POI integration plan](../../docs/vietmap-poi-integration-plan.md).

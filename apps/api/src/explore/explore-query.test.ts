@@ -21,6 +21,8 @@ const place = {
   },
   name: "Góc Test",
   priceLevel: 2,
+  serviceAreaCode: "hcm-q3",
+  serviceAreaName: "Quận 3",
   sizeCategory: "medium",
   slug: "goc-test",
   typicalSpendMax: 90_000,

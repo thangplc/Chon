@@ -91,12 +91,17 @@ function validateFeature(
     properties.name === definition.osmName
       ? undefined
       : `name=${String(properties.name)}`,
-    properties.type === "historic"
+    properties.type === definition.osmFeatureType
       ? undefined
       : `type=${String(properties.type)}`,
-    extraTags?.end_date === definition.osmEndDate
-      ? undefined
-      : `end_date=${String(extraTags?.end_date)}`,
+    definition.areaType === "historic_district" &&
+    extraTags?.end_date !== definition.osmEndDate
+      ? `end_date=${String(extraTags?.end_date)}`
+      : undefined,
+    definition.areaType === "ward" &&
+    extraTags?.admin_level !== definition.osmAdminLevel
+      ? `admin_level=${String(extraTags?.admin_level)}`
+      : undefined,
   ].filter((failure): failure is string => Boolean(failure));
 
   if (failures.length > 0) {
@@ -237,8 +242,10 @@ async function downloadMissing(
       boundaryVersion: definition.version,
       bytes,
       checksum,
-      osmEndDate: definition.osmEndDate,
-      osmFeatureType: "historic",
+      ...(definition.areaType === "historic_district"
+        ? { osmEndDate: definition.osmEndDate }
+        : { osmAdminLevel: definition.osmAdminLevel }),
+      osmFeatureType: definition.osmFeatureType,
       retrievalUrl: lookupUrl.toString(),
       retrievedAt,
       schemaVersion: 1,

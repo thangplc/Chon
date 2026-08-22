@@ -43,4 +43,10 @@ export class ExploreController {
 
     return { data: dataset };
   }
+
+  @ApiOkResponse({ description: "Active service areas available in Explore" })
+  @Get("service-areas")
+  async readServiceAreas() {
+    return { data: await this.exploreService.listServiceAreas() };
+  }
 }

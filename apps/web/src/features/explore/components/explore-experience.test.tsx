@@ -16,6 +16,10 @@ vi.mock("../analytics/explore-analytics", () => ({
   trackExploreEvent: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 type MockExploreMapProps = Readonly<{
   locationSelectionEnabled?: boolean;
   mapStyleUrl: string | null;
@@ -201,7 +205,7 @@ describe("ExploreExperience", () => {
     expect(
       await screen.findByRole("region", { name: "1 Chốn để thử" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Khu vực")).toHaveValue("Quận 1");
+    expect(screen.getByLabelText("Khu vực")).toHaveValue("hcm-q1");
     expect(screen.getByLabelText("Ngày ghé")).toHaveValue("2026-08-17");
     expect(screen.getByLabelText("Giờ chính xác")).toHaveValue("19:30");
     expect(screen.getByLabelText("Thời lượng ngồi")).toHaveValue("180");
@@ -227,13 +231,13 @@ describe("ExploreExperience", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Khu vực"), {
-      target: { value: "Quận 3" },
+      target: { value: "hcm-q3" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Chia sẻ bộ lọc" }));
 
     expect(await screen.findByText("Đã sao chép link")).toBeInTheDocument();
     expect(writeText).toHaveBeenCalledWith(
-      expect.stringContaining("district=q3"),
+      expect.stringContaining("area=hcm-q3"),
     );
   });
 
@@ -256,7 +260,7 @@ describe("ExploreExperience", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Khu vực"), {
-      target: { value: "Quận 1" },
+      target: { value: "hcm-q1" },
     });
 
     const results = screen.getByRole("region", { name: "2 Chốn để thử" });
@@ -510,7 +514,7 @@ describe("ExploreExperience", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Bạn ghé Chốn này khi nào/,
+        name: /Bạn đang chia sẻ trải nghiệm nào/,
       }),
     ).toBeInTheDocument();
     expect(window.location.search).toContain("contribute=1");
@@ -537,7 +541,7 @@ describe("ExploreExperience", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Bạn ghé Chốn này khi nào/,
+        name: /Bạn đang chia sẻ trải nghiệm nào/,
       }),
     ).toBeInTheDocument();
     expect(

@@ -24,7 +24,25 @@ hình.
 - Không gọi VIETMAP trực tiếp từ request của web.
 - Không tự động tạo hoặc activate service area từ tên quận/tỉnh provider trả về.
 - Chưa mở rộng toàn bộ TP.HCM hoặc các loại địa điểm khác trong đợt đầu.
+- Rollout hiện tại chỉ dùng category cafe `1001-1`; chưa chạy đồng thời nhiều
+  category POI liên quan.
 - Chưa xây Admin Dashboard.
+
+## Mở rộng category — deferred
+
+Giai đoạn hiện tại giữ `VIETMAP_POI_CATEGORY_CAFE=1001-1` làm baseline đã biết
+để tránh tăng nhiễu trong lúc hoàn thiện sản phẩm. Sau MVP sẽ thực hiện một
+coverage spike trước khi mở rộng sang các category liên quan như coffee shop,
+trà/cafe, bakery/cafe, nhà hàng, khách sạn và các POI du lịch.
+
+Việc mở rộng không chỉ là thêm mã category. Pipeline cần:
+
+- cấu hình danh sách category theo loại địa điểm, không hard-code một mã;
+- đo phần POI mới và phần giao nhau của từng category/query;
+- hợp nhất theo provider ID và kiểm tra duplicate tên + tọa độ;
+- lưu category provenance để biết POI đến từ lượt discovery nào;
+- dry-run/coverage report và review false positive trước khi import thật;
+- chỉ bật category mới trên production sau khi qua quota, terms và quality gate.
 
 ## Quyết định kiến trúc
 
@@ -138,6 +156,7 @@ VIETMAP_POI_CATEGORY_CAFE=1001-1
 VIETMAP_POI_PLACE_BASE_URL=https://maps.vietmap.vn/api/place/v4
 VIETMAP_POI_REVERSE_BASE_URL=https://maps.vietmap.vn/api/reverse/v4
 VIETMAP_POI_TIMEOUT_MS=5000
+VIETMAP_POI_REQUEST_INTERVAL_MS=500
 VIETMAP_POI_MAX_REQUESTS=200
 ```
 

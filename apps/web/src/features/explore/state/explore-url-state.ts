@@ -1,6 +1,5 @@
 import {
   purposes,
-  type ExploreDistrict,
   type ExplorePriceLevel,
   type ExploreSizeCategory,
   type PurposeId,
@@ -26,7 +25,7 @@ export const exploreTimeBuckets = [
 export type ExploreUrlState = Readonly<{
   amenities: readonly string[];
   dateValue: string;
-  district: "all" | ExploreDistrict;
+  serviceAreaCode: "all" | string;
   durationMinutes: number;
   exactTime: string;
   locationQuery: string;
@@ -39,14 +38,11 @@ export type ExploreUrlState = Readonly<{
 
 const purposeIds = new Set<PurposeId>(purposes.map(({ id }) => id));
 const timeBucketIds = new Set<TimeBucket>(exploreTimeBuckets);
-const districtTokens: Readonly<Record<string, ExploreDistrict>> = {
-  binh_thanh: "Bình Thạnh",
-  q1: "Quận 1",
-  q3: "Quận 3",
+const legacyDistrictTokens: Readonly<Record<string, string>> = {
+  binh_thanh: "hcm-binh-thanh",
+  q1: "hcm-q1",
+  q3: "hcm-q3",
 };
-const districtToToken = new Map(
-  Object.entries(districtTokens).map(([token, district]) => [district, token]),
-);
 const sizeIds = new Set<ExploreSizeCategory>([
   "small",
   "medium",
@@ -63,7 +59,7 @@ export function createDefaultExploreUrlState(
   return {
     amenities: [],
     dateValue,
-    district: "all",
+    serviceAreaCode: "all",
     durationMinutes: 120,
     exactTime: "09:00",
     locationQuery: "",
@@ -115,7 +111,8 @@ export function parseExploreUrlState(
   const params = new URLSearchParams(search);
   const purposeValue = params.get("purpose");
   const timeBucketValue = params.get("time_bucket");
-  const districtToken = params.get("district");
+  const serviceAreaToken = params.get("area");
+  const legacyDistrictToken = params.get("district");
   const priceRangeValue = params.get("price_range");
   const parsedSizes = parseList(params.get("size")).filter(
     (value): value is ExploreSizeCategory =>
@@ -131,10 +128,11 @@ export function parseExploreUrlState(
   return {
     amenities: parseList(params.get("amenities")),
     dateValue: parseDate(params.get("date"), fallback.dateValue),
-    district:
-      districtToken === null
-        ? fallback.district
-        : (districtTokens[districtToken] ?? "all"),
+    serviceAreaCode:
+      serviceAreaToken?.match(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u)?.[0] ??
+      (legacyDistrictToken
+        ? (legacyDistrictTokens[legacyDistrictToken] ?? "all")
+        : fallback.serviceAreaCode),
     durationMinutes: parseInteger(
       params.get("duration"),
       durationSet,
@@ -165,8 +163,8 @@ export function serializeExploreUrlState(state: ExploreUrlState): string {
   params.set("date", state.dateValue);
   params.set("time", state.exactTime);
   params.set("duration", String(state.durationMinutes));
-  if (state.district !== "all") {
-    params.set("district", districtToToken.get(state.district) ?? "");
+  if (state.serviceAreaCode !== "all") {
+    params.set("area", state.serviceAreaCode);
   }
   if (state.locationQuery) params.set("q", state.locationQuery);
   if (state.sizes.length > 0)

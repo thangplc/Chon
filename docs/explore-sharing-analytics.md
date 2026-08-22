@@ -10,9 +10,13 @@ Các tham số hiện được hỗ trợ:
 
 ```text
 purpose, date, time, duration
-district=q1|q3|binh_thanh
+area=<service-area-code>
 q, size, amenities, price_levels, price_range
 ```
+
+`district=q1|q3|binh_thanh` vẫn được đọc để tương thích link cũ, nhưng URL mới
+luôn được canonicalize sang `area=hcm-q1|hcm-q3|hcm-binh-thanh`. Danh sách mã
+khu vực không hard-code ở frontend mà lấy từ service area active trong DB.
 
 Khi mở lại URL, frontend hydrate các bộ lọc và tìm các địa điểm phù hợp với
 `q` trong dataset hiện tại. Tọa độ vị trí hiện tại/chọn trên bản đồ không được

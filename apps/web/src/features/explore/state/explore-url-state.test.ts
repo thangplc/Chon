@@ -17,7 +17,7 @@ describe("Explore URL state", () => {
     expect(state).toEqual({
       amenities: ["Điều hòa", "Wi-Fi"],
       dateValue: "2026-08-17",
-      district: "Quận 3",
+      serviceAreaCode: "hcm-q3",
       durationMinutes: 180,
       exactTime: "19:30",
       locationQuery: "Nguyễn Huệ",
@@ -29,7 +29,7 @@ describe("Explore URL state", () => {
     });
 
     expect(serializeExploreUrlState(state)).toBe(
-      "?purpose=date&date=2026-08-17&time=19%3A30&duration=180&district=q3&q=Nguy%E1%BB%85n+Hu%E1%BB%87&size=medium%2Csmall&amenities=%C4%90i%E1%BB%81u+h%C3%B2a%2CWi-Fi&price_levels=1%2C3&price_range=50-100",
+      "?purpose=date&date=2026-08-17&time=19%3A30&duration=180&area=hcm-q3&q=Nguy%E1%BB%85n+Hu%E1%BB%87&size=medium%2Csmall&amenities=%C4%90i%E1%BB%81u+h%C3%B2a%2CWi-Fi&price_levels=1%2C3&price_range=50-100",
     );
   });
 
@@ -42,7 +42,7 @@ describe("Explore URL state", () => {
 
     expect(state).toMatchObject({
       dateValue: "2026-08-16",
-      district: "all",
+      serviceAreaCode: "all",
       durationMinutes: 120,
       exactTime: "09:00",
       locationQuery: "",

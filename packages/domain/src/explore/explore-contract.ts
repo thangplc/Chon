@@ -10,9 +10,6 @@ export const purposes = [
   { id: "late_night", label: "Đi khuya", icon: "🌙" },
 ] as const;
 
-export const exploreDistricts = ["Quận 1", "Quận 3", "Bình Thạnh"] as const;
-
-export type ExploreDistrict = (typeof exploreDistricts)[number];
 export type PurposeId = (typeof purposes)[number]["id"];
 export type ExploreDayType = "weekday" | "friday" | "weekend";
 export type ExplorePriceLevel = 1 | 2 | 3 | 4;
@@ -47,7 +44,7 @@ export type ExploreSourcePlace = Readonly<{
   address: string;
   amenities: readonly string[];
   currency: string;
-  district: ExploreDistrict;
+  district: string;
   estimatedCapacity: number | null;
   id: string;
   latitude: number;
@@ -59,10 +56,25 @@ export type ExploreSourcePlace = Readonly<{
   }>;
   name: string;
   priceLevel: ExplorePriceLevel | null;
+  serviceAreaCode: string;
+  serviceAreaName: string;
   sizeCategory: ExploreSizeCategory;
   slug: string;
   typicalSpendMax: number | null;
   typicalSpendMin: number | null;
+}>;
+
+export type ExploreServiceArea = Readonly<{
+  areaType: string;
+  bounds: Readonly<{
+    east: number;
+    north: number;
+    south: number;
+    west: number;
+  }>;
+  code: string;
+  displayName: string;
+  placeCount: number;
 }>;
 
 export type ExploreCommunityReport = Readonly<{

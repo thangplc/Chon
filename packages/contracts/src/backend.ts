@@ -55,7 +55,7 @@ const exploreDatasetSchema = z.object({
       address: z.string(),
       amenities: z.array(z.string().min(1)),
       currency: z.string().length(3),
-      district: z.enum(["Quận 1", "Quận 3", "Bình Thạnh"]),
+      district: z.string().min(1),
       estimatedCapacity: z.number().int().positive().nullable(),
       id: z.string().uuid(),
       latitude: z.number(),
@@ -65,6 +65,8 @@ const exploreDatasetSchema = z.object({
       priceLevel: z
         .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
         .nullable(),
+      serviceAreaCode: z.string().min(1),
+      serviceAreaName: z.string().min(1),
       sizeCategory: z.enum(["small", "medium", "large", "unknown"]),
       slug: z.string(),
       typicalSpendMax: z.number().int().nonnegative().nullable(),
@@ -85,6 +87,23 @@ const exploreDatasetSchema = z.object({
 
 export const exploreDatasetResponseSchema = z.object({
   data: exploreDatasetSchema,
+});
+
+export const exploreServiceAreasResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      areaType: z.string().min(1),
+      bounds: z.object({
+        east: z.number(),
+        north: z.number(),
+        south: z.number(),
+        west: z.number(),
+      }),
+      code: z.string().min(1),
+      displayName: z.string().min(1),
+      placeCount: z.number().int().nonnegative(),
+    }),
+  ),
 });
 
 const placeDetailMediaSchema = z.object({

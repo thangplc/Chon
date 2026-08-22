@@ -49,6 +49,7 @@ function geolocationButtonLabel(status: GeolocationStatus): string {
 }
 
 type ExploreMapProps = Readonly<{
+  focusBounds?: MapViewportBounds | null;
   locationSelectionEnabled?: boolean;
   mapStyleUrl: string | null;
   onSelectLocation?: (
@@ -99,6 +100,7 @@ function createPlaceFeatureCollection(
 }
 
 export function ExploreMap({
+  focusBounds,
   locationSelectionEnabled = false,
   mapStyleUrl,
   onSelectLocation,
@@ -359,6 +361,17 @@ export function ExploreMap({
   useEffect(() => {
     if (!mapInstance || mapStatus !== "ready") return;
 
+    if (focusBounds) {
+      mapInstance.fitBounds(
+        [
+          [focusBounds.west, focusBounds.south],
+          [focusBounds.east, focusBounds.north],
+        ],
+        { duration: 500, maxZoom: 14, padding: 64 },
+      );
+      return;
+    }
+
     const bounds = new maplibregl.LngLatBounds();
     places.forEach((place) => bounds.extend([place.longitude, place.latitude]));
 
@@ -375,7 +388,7 @@ export function ExploreMap({
         padding: 64,
       });
     }
-  }, [mapInstance, mapStatus, places]);
+  }, [focusBounds, mapInstance, mapStatus, places]);
 
   useEffect(() => {
     if (!mapInstance || !selectedPlaceId) return;

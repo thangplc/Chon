@@ -6,6 +6,7 @@ import { ExploreController } from "./explore.controller";
 import type { ExploreService } from "./explore.service";
 
 const getDataset = vi.fn();
+const listServiceAreas = vi.fn();
 const config = {
   get: vi.fn((key: keyof ApiEnvironment) => {
     const values: Record<string, string> = {
@@ -20,6 +21,8 @@ const config = {
 describe("ExploreController", () => {
   beforeEach(() => {
     getDataset.mockReset();
+    listServiceAreas.mockReset();
+    listServiceAreas.mockResolvedValue([]);
     getDataset.mockResolvedValue({
       places: [],
       reports: [],
@@ -31,6 +34,7 @@ describe("ExploreController", () => {
   it("forwards Apply metadata filters to the dataset service", async () => {
     const controller = new ExploreController(config, {
       getDataset,
+      listServiceAreas,
     } as unknown as ExploreService);
 
     await expect(
@@ -52,6 +56,26 @@ describe("ExploreController", () => {
       priceMax: 50_000,
       priceMin: null,
       sizeCategories: ["small"],
+    });
+  });
+
+  it("returns dynamic active service areas", async () => {
+    listServiceAreas.mockResolvedValue([
+      {
+        areaType: "ward",
+        bounds: { east: 109.27, north: 13.81, south: 13.75, west: 109.19 },
+        code: "gia-lai-quy-nhon",
+        displayName: "Phường Quy Nhơn",
+        placeCount: 35,
+      },
+    ]);
+    const controller = new ExploreController(config, {
+      getDataset,
+      listServiceAreas,
+    } as unknown as ExploreService);
+
+    await expect(controller.readServiceAreas()).resolves.toEqual({
+      data: [expect.objectContaining({ code: "gia-lai-quy-nhon" })],
     });
   });
 });

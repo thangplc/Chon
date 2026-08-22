@@ -18,6 +18,7 @@ export type VietmapPoiConfig = Readonly<{
   enabled: boolean;
   maxRequests: number;
   placeBaseUrl: string;
+  requestIntervalMs: number;
   reverseBaseUrl: string;
   productionReady: boolean;
   provider: typeof POI_PROVIDER;
@@ -45,6 +46,22 @@ function parsePositiveInteger(
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > maximum) {
     throw new Error(`${key} must be an integer between 1 and ${maximum}`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(
+  environment: Environment,
+  key: string,
+  fallback: number,
+  maximum: number,
+): number {
+  const value = environment[key]?.trim();
+  if (!value) return fallback;
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > maximum) {
+    throw new Error(`${key} must be an integer between 0 and ${maximum}`);
   }
   return parsed;
 }
@@ -94,6 +111,12 @@ export function readVietmapPoiConfig(
       environment,
       "VIETMAP_POI_PLACE_BASE_URL",
       VIETMAP_POI_DEFAULT_PLACE_BASE_URL,
+    ),
+    requestIntervalMs: parseNonNegativeInteger(
+      environment,
+      "VIETMAP_POI_REQUEST_INTERVAL_MS",
+      500,
+      60_000,
     ),
     reverseBaseUrl: parseUrl(
       environment,
