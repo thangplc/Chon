@@ -135,7 +135,8 @@ Beta user gửi report trong dưới 15 giây và thấy dữ liệu địa đi�
 
 ## Sprint 6 — Collections và sharing
 
-- [ ] Lưu địa điểm.
+- [x] Lưu địa điểm — collection private mặc định, API idempotent theo identity,
+  trạng thái lưu trên Explore/Place Detail và trang `/saved`.
 - [ ] Tạo collection public/private.
 - [ ] Trang collection có metadata chia sẻ đẹp.
 - [ ] Collection editorial đầu tiên.

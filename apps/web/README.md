@@ -103,5 +103,9 @@ không dùng prefix `NEXT_PUBLIC_` cho secret này. Xem callback URL và securit
 boundary tại [Authentication](../../docs/authentication.md).
 
 Place Detail có flow `Góp vibe` ba bước cho user đã đăng nhập; report đi qua
-same-origin proxy `/api/places/:slug/vibe-reports` và chờ moderation trước khi
-ảnh hưởng đến snapshot.
+same-origin proxy `/api/places/:slug/vibe-reports` và được auto-publish trong
+MVP trước khi snapshot của địa điểm được rebuild.
+
+Explore và Place Detail dùng chung `SavePlaceButton`. Dữ liệu được lưu trong
+collection private mặc định qua same-origin proxy; `/saved` hiển thị danh sách
+của identity hiện tại. Xem [Collections](../../docs/collections.md).
