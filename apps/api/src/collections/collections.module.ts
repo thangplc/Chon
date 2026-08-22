@@ -2,11 +2,19 @@ import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module";
 import { DatabaseModule } from "../database/database.module";
-import { CollectionsController } from "./collections.controller";
+import {
+  CollectionsController,
+  OwnedCollectionsController,
+  PublicCollectionsController,
+} from "./collections.controller";
 import { CollectionsService } from "./collections.service";
 
 @Module({
-  controllers: [CollectionsController],
+  controllers: [
+    CollectionsController,
+    OwnedCollectionsController,
+    PublicCollectionsController,
+  ],
   imports: [AuthModule, DatabaseModule],
   providers: [CollectionsService],
 })
