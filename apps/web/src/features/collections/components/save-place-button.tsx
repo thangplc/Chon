@@ -8,6 +8,7 @@ import {
   SavedPlaceError,
   setSavedPlace,
 } from "../data/saved-places-repository";
+import { CollectionPicker } from "./collection-picker";
 
 type SavePlaceButtonProps = Readonly<{
   className?: string;
@@ -25,6 +26,7 @@ export function SavePlaceButton({
   placeSlug,
 }: SavePlaceButtonProps) {
   const [saved, setSaved] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [status, setStatus] = useState<
     "checking" | "idle" | "saving" | "signed-out" | "error"
   >("checking");
@@ -104,16 +106,40 @@ export function SavePlaceButton({
           : "Lưu";
 
   return (
-    <button
-      aria-label={`${label} ${placeName}`}
-      aria-pressed={saved}
-      className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-[#ddd2c3] bg-[#fffdf9] px-3 text-sm font-extrabold text-[#28231f] transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] disabled:cursor-wait disabled:opacity-60 ${className}`}
-      disabled={busy}
-      onClick={() => void toggleSaved()}
-      type="button"
-    >
-      <span aria-hidden="true">{saved ? "♥" : "♡"}</span>
-      {!compact && <span>{busy ? "Đang lưu…" : label}</span>}
-    </button>
+    <>
+      <button
+        aria-label={`${label} ${placeName}`}
+        aria-pressed={saved}
+        className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-[#ddd2c3] bg-[#fffdf9] px-3 text-sm font-extrabold text-[#28231f] transition hover:border-[#c96040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] disabled:cursor-wait disabled:opacity-60 ${className}`}
+        disabled={busy}
+        onClick={() => {
+          if (status === "signed-out") void toggleSaved();
+          else if (!busy) setPickerOpen(true);
+        }}
+        type="button"
+      >
+        <span aria-hidden="true">{saved ? "♥" : "♡"}</span>
+        {!compact && (
+          <span>
+            {busy
+              ? "Đang tải…"
+              : saved
+                ? "Đã lưu · Chọn bộ sưu tập"
+                : "Lưu vào bộ sưu tập"}
+          </span>
+        )}
+      </button>
+      {pickerOpen && (
+        <CollectionPicker
+          onClose={() => setPickerOpen(false)}
+          onDefaultChange={(nextSaved) => {
+            setSaved(nextSaved);
+            onSavedChange?.(nextSaved);
+          }}
+          placeName={placeName}
+          placeSlug={placeSlug}
+        />
+      )}
+    </>
   );
 }

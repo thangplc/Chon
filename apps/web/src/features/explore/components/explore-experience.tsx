@@ -1030,15 +1030,17 @@ export function ExploreExperience({
     <main className="chon-prototype-app text-[#28231f]">
       <p className="sr-only">Môi trường thử nghiệm · Vibe cộng đồng mô phỏng</p>
 
-      <header className="grid gap-3 border-b border-[#ddd2c3] bg-[#fffdf9] px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-6 lg:grid-cols-[220px_minmax(260px,620px)_1fr] lg:gap-5 lg:px-8">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-[#ddd2c3] bg-[#fffdf9] px-4 py-3 sm:px-6 lg:grid-cols-[160px_minmax(280px,1fr)_auto] lg:gap-4 lg:px-8 xl:grid-cols-[180px_minmax(320px,1fr)_auto]">
         <div className="flex items-center gap-2.5">
           <span className="grid size-10 place-items-center rounded-full bg-[#c96040] text-xl font-bold text-white">
             C
           </span>
-          <span className="chon-heading text-2xl font-bold">Chốn</span>
+          <span className="chon-heading hidden text-2xl font-bold min-[400px]:inline">
+            Chốn
+          </span>
         </div>
         <form
-          className="order-3 grid min-w-0 grid-cols-[1fr_auto] overflow-hidden rounded-full border border-[#ddd2c3] bg-[#f7f2eb] sm:order-none"
+          className="order-3 col-span-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-full border border-[#ddd2c3] bg-[#f7f2eb] lg:order-none lg:col-span-1"
           onSubmit={handleSearchLocation}
         >
           <label className="sr-only" htmlFor="global-location-search">
@@ -1060,10 +1062,10 @@ export function ExploreExperience({
             Tìm
           </Button>
         </form>
-        <div className="flex min-w-0 items-center justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-2 whitespace-nowrap">
           {authControls}
           <Button
-            className="hidden rounded-full lg:inline-flex"
+            className="hidden shrink-0 rounded-full xl:inline-flex"
             onClick={() => void handleShare()}
             variant="secondary"
           >
@@ -1071,7 +1073,7 @@ export function ExploreExperience({
           </Button>
           <Badge
             aria-live="polite"
-            className="hidden lg:inline-flex"
+            className="hidden shrink-0 2xl:inline-flex"
             tone="neutral"
           >
             {shareStatus === "error"

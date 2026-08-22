@@ -28,6 +28,7 @@ Các biến frontend:
 ```ini
 BACKEND_API_URL=http://127.0.0.1:3001
 BACKEND_API_TIMEOUT_MS=5000
+SITE_URL=http://localhost:3000
 NEXT_PUBLIC_MAPTILER_API_KEY=your_browser_key
 NEXT_PUBLIC_MAPTILER_STYLE_ID=streets-v4
 
@@ -109,3 +110,7 @@ MVP trước khi snapshot của địa điểm được rebuild.
 Explore và Place Detail dùng chung `SavePlaceButton`. Dữ liệu được lưu trong
 collection private mặc định qua same-origin proxy; `/saved` hiển thị danh sách
 của identity hiện tại. Xem [Collections](../../docs/collections.md).
+
+Public collection được server-render tại `/collections/:id`. `SITE_URL` phải là
+origin HTTPS thật ở production để canonical URL và Open Graph image dùng đúng
+domain khi chia sẻ lên mạng xã hội.

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AuthControls } from "@/features/auth/components/auth-controls";
 import { SavedPlacesView } from "@/features/collections/components/saved-places-view";
 
-export const metadata: Metadata = { title: "Địa điểm đã lưu" };
+export const metadata: Metadata = { title: "Bộ sưu tập" };
 
 export default function SavedPlacesPage() {
   return (
@@ -18,10 +18,10 @@ export default function SavedPlacesPage() {
         </header>
         <section className="mt-10">
           <p className="text-xs font-extrabold tracking-[0.12em] text-[#963f2a] uppercase">
-            Bộ sưu tập mặc định
+            Bộ sưu tập của bạn
           </p>
           <h1 className="mt-2 text-3xl font-extrabold sm:text-4xl">
-            Địa điểm đã lưu
+            Bộ sưu tập
           </h1>
           <div className="mt-6">
             <SavedPlacesView />
