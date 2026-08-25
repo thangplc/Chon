@@ -7,10 +7,12 @@ import {
   type PlaceDetailIntent,
 } from "../domain/place-vibe-presentation";
 import { VibeReportFlow } from "@/features/contribution/components/vibe-report-flow";
+import { SavePlaceButton } from "@/features/collections/components/save-place-button";
 import { PlaceDetailBackControl } from "./place-detail-back-control";
 import { PlaceFacts } from "./place-facts";
 import { PlaceGallery } from "./place-gallery";
 import { PlaceVibeSummary } from "./place-vibe-summary";
+import { TrackedDirectionsLink } from "@/features/analytics/tracked-directions-link";
 
 type PlaceDetailViewProps = Readonly<{
   authControls?: ReactNode;
@@ -116,11 +118,19 @@ export function PlaceDetailView({
                   {place.name}
                 </h1>
               </div>
-              <span
-                className={`mt-1 shrink-0 rounded-full px-3 py-1.5 text-xs font-extrabold ${statusClassNames[openStatus.tone]}`}
-              >
-                {openStatus.label}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span
+                  className={`mt-1 rounded-full px-3 py-1.5 text-xs font-extrabold ${statusClassNames[openStatus.tone]}`}
+                >
+                  {openStatus.label}
+                </span>
+                <SavePlaceButton
+                  compact
+                  placeName={place.name}
+                  placeSlug={place.slug}
+                  surface="place_detail"
+                />
+              </div>
             </div>
 
             <p className="mt-4 flex items-start gap-2 text-sm leading-6 text-[#5e746a]">
@@ -142,15 +152,17 @@ export function PlaceDetailView({
                   placeSlug={place.slug}
                   triggerClassName="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#c96040] px-4 text-sm font-extrabold text-white transition hover:bg-[#a94e35] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] lg:min-w-40 lg:flex-none lg:px-6"
                 />
-                <a
+                <TrackedDirectionsLink
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#ddd2c3] bg-[#fffdf9] px-4 text-sm font-extrabold text-[#28231f] transition hover:border-[#c96040] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] lg:min-w-36 lg:flex-none lg:px-6"
                   href={osmUrl}
+                  placeSlug={place.slug}
                   rel="noreferrer"
+                  surface="place_detail"
                   target="_blank"
                 >
                   Chỉ đường
                   <span aria-hidden="true">↗</span>
-                </a>
+                </TrackedDirectionsLink>
               </div>
             </div>
 

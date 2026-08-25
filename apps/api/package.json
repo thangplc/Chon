@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "data:import": "node --import tsx scripts/data-import.ts",
     "data:verify": "node --import tsx scripts/verify-data-import.ts",
+    "editorial:collections:import": "node --import tsx scripts/import-editorial-collections.ts",
     "metadata:synthetic:import": "node --import tsx scripts/import-synthetic-place-metadata.ts",
     "db:check": "drizzle-kit check",
     "db:down": "docker compose --file compose.yaml --env-file .env down",

@@ -135,11 +135,15 @@ Beta user gửi report trong dưới 15 giây và thấy dữ liệu địa đi�
 
 ## Sprint 6 — Collections và sharing
 
-- [ ] Lưu địa điểm.
-- [ ] Tạo collection public/private.
-- [ ] Trang collection có metadata chia sẻ đẹp.
-- [ ] Collection editorial đầu tiên.
-- [ ] Event analytics cho save, share và open directions.
+- [x] Lưu địa điểm — collection private mặc định, API idempotent theo identity,
+  trạng thái lưu trên Explore/Place Detail và trang `/saved`.
+- [x] Tạo collection public/private — owner CRUD, collection picker, URL public
+  ổn định và chặn truy cập collection private ngoài owner.
+- [x] Trang collection có metadata chia sẻ đẹp — server-rendered public page,
+  canonical, Open Graph/Twitter metadata và preview image động.
+- [x] Collection editorial đầu tiên.
+- [x] Event analytics cho save, share và open directions — chỉ ghi sau thao tác
+  thành công, payload privacy-safe và lỗi analytics không chặn luồng chính.
 
 ### Demo
 

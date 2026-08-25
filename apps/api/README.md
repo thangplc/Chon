@@ -118,6 +118,8 @@ volume; PostgreSQL được quản lý riêng bằng `pnpm db:up` và `pnpm db:d
 - `GET /v1/places?bbox=west,south,east,north&limit=50`
 - `GET /v1/places?lat=10.775&lng=106.700&radius=1500&limit=50`
 - `GET /v1/places/:slug`
+- `GET /v1/me/saved-places` (requires authentication)
+- `GET|PUT|DELETE /v1/me/saved-places/:slug` (requires authentication)
 - `GET /v1/places/:slug/vibe?day_type=weekday&time_bucket=morning&area_id=<uuid>`
 - `GET /v1/explore/simulated`
 - `GET /v1/explore/service-areas` (active areas, current boundary bounds and primary POI count)

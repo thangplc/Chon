@@ -35,4 +35,38 @@ describe("analytics contract", () => {
       }),
     ).toThrow();
   });
+
+  it.each([
+    {
+      eventName: "place_save_succeeded",
+      payload: {
+        collectionType: "default",
+        placeSlug: "goc-may-01",
+        surface: "explore",
+      },
+    },
+    {
+      eventName: "collection_share_clicked",
+      payload: {
+        collectionId: "11111111-1111-4111-8111-111111111111",
+        ownerType: "editorial",
+        placeCount: 9,
+      },
+    },
+    {
+      eventName: "directions_opened",
+      payload: {
+        placeSlug: "goc-may-01",
+        provider: "openstreetmap",
+        surface: "place_detail",
+      },
+    },
+  ] as const)("accepts $eventName", (event) => {
+    expect(
+      analyticsEventSchema.parse({
+        ...event,
+        sessionId: "anon_1234567890",
+      }),
+    ).toMatchObject(event);
+  });
 });

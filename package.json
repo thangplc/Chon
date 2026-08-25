@@ -29,6 +29,7 @@
     "test:api": "pnpm --filter @chon/api test",
     "data:import": "pnpm --filter @chon/api data:import",
     "data:verify": "pnpm --filter @chon/api data:verify",
+    "editorial:collections:import": "pnpm --filter @chon/api editorial:collections:import",
     "metadata:synthetic:import": "pnpm --filter @chon/api metadata:synthetic:import",
     "service-areas:sync": "pnpm --filter @chon/api service-areas:sync",
     "service-areas:import": "pnpm --filter @chon/api service-areas:import",
