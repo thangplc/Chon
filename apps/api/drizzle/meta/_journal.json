@@ -99,6 +99,13 @@
       "when": 1787386460719,
       "tag": "0013_add_editorial_collections",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787387809270,
+      "tag": "0014_add_collection_analytics_events",
+      "breakpoints": true
     }
   ]
 }

@@ -33,7 +33,7 @@ export const analyticsEvents = pgTable(
     index("analytics_events_session_id_idx").on(table.sessionId),
     check(
       "analytics_events_event_name_check",
-      sql`${table.eventName} IN ('explore_filter_changed', 'explore_results_viewed', 'explore_share_clicked')`,
+      sql`${table.eventName} IN ('explore_filter_changed', 'explore_results_viewed', 'explore_share_clicked', 'place_save_succeeded', 'collection_share_clicked', 'directions_opened')`,
     ),
     check(
       "analytics_events_session_id_check",
