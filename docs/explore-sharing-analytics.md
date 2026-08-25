@@ -28,23 +28,28 @@ không khả dụng, UI báo lỗi và không làm gián đoạn luồng Explore
 
 ## Analytics contract
 
-Frontend tạo một anonymous session ID trong `sessionStorage` và gửi ba event
-được allowlist:
+Frontend tạo một anonymous session ID trong `sessionStorage` và chỉ gửi các
+event được allowlist:
 
 - `explore_results_viewed`
 - `explore_filter_changed`
 - `explore_share_clicked`
+- `place_save_succeeded`
+- `collection_share_clicked`
+- `directions_opened`
 
 Payload chỉ chứa context đã chuẩn hóa: mục đích, khung giờ/ngày, thời lượng,
-khu vực, số lượng filter metadata và số kết quả. Không gửi raw search text,
-tọa độ hoặc nội dung report. Event được gửi bằng `sendBeacon`, fallback sang
-`fetch(..., { keepalive: true })`; lỗi analytics không làm hỏng Explore.
+khu vực, số lượng filter metadata và số kết quả; hoặc ID/slug, loại collection,
+bề mặt thao tác và provider chỉ đường thuộc allowlist. Không gửi raw search
+text, tọa độ, identity hoặc nội dung report. Event được gửi bằng `sendBeacon`,
+fallback sang `fetch(..., { keepalive: true })`; lỗi analytics không làm hỏng
+luồng chính của người dùng.
 
 Browser gọi same-origin `POST /api/analytics/events`; Next.js proxy chuyển
 tiếp tới `POST /v1/analytics/events` của NestJS. API validate lại bằng shared
 Zod contract trước khi ghi `analytics_events`. Migration là
 `apps/api/drizzle/0009_organic_human_fly.sql`.
 
-Analytics hiện là nền tảng đo Explore và chưa có retention/aggregation
-dashboard. Khi triển khai production cần bổ sung retention policy, access
-control và rate limit theo traffic thực tế.
+Analytics hiện là nền tảng đo Explore, hành vi lưu/chia sẻ collection và mở chỉ
+đường; chưa có retention/aggregation dashboard. Khi triển khai production cần
+bổ sung retention policy, access control và rate limit theo traffic thực tế.

@@ -142,7 +142,8 @@ Beta user gửi report trong dưới 15 giây và thấy dữ liệu địa đi�
 - [x] Trang collection có metadata chia sẻ đẹp — server-rendered public page,
   canonical, Open Graph/Twitter metadata và preview image động.
 - [x] Collection editorial đầu tiên.
-- [ ] Event analytics cho save, share và open directions.
+- [x] Event analytics cho save, share và open directions — chỉ ghi sau thao tác
+  thành công, payload privacy-safe và lỗi analytics không chặn luồng chính.
 
 ### Demo
 

@@ -58,3 +58,13 @@ Schema đã có `note` và `position`, nhưng chưa expose mutation cho các fie
 pnpm editorial:collections:import --file data/fixtures/editorial-collections.csv --environment local --dry-run
 pnpm editorial:collections:import --file data/fixtures/editorial-collections.csv --environment local
 ```
+
+## Analytics
+
+- Chỉ ghi `place_save_succeeded` sau khi API lưu vào collection thành công.
+- Chỉ ghi `collection_share_clicked` sau khi URL public được sao chép thành
+  công.
+- Link chỉ đường ở trang chi tiết địa điểm và public collection ghi
+  `directions_opened` với provider `openstreetmap`.
+- Payload không chứa user identity, nội dung ghi chú, vị trí thiết bị hoặc tọa
+  độ địa điểm. Lỗi analytics không chặn thao tác chính.
