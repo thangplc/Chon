@@ -10,17 +10,20 @@ import {
   loadOwnedCollection,
   setPlaceInCollection,
 } from "../data/collections-repository";
+import { trackAnalyticsEvent } from "@/features/analytics/client";
 
 export function CollectionPicker({
   onClose,
   onDefaultChange,
   placeName,
   placeSlug,
+  surface,
 }: Readonly<{
   onClose: () => void;
   onDefaultChange?: (saved: boolean) => void;
   placeName: string;
   placeSlug: string;
+  surface: "explore" | "place_detail";
 }>) {
   const [collections, setCollections] = useState<readonly CollectionSummary[]>(
     [],
@@ -128,6 +131,15 @@ export function CollectionPicker({
                             placeSlug,
                             next,
                           );
+                          if (next) {
+                            trackAnalyticsEvent("place_save_succeeded", {
+                              collectionType: collection.isDefault
+                                ? "default"
+                                : "custom",
+                              placeSlug,
+                              surface,
+                            });
+                          }
                           if (collection.isDefault) onDefaultChange?.(next);
                           setSelected((current) => {
                             const updated = new Set(current);

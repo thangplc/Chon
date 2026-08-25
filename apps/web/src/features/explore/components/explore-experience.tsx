@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AnalyticsEventPayload } from "@chon/contracts/analytics";
+import type { AnalyticsPayloadFor } from "@chon/contracts/analytics";
 
 import {
   purposes,
@@ -527,7 +527,9 @@ export function ExploreExperience({
     () => serializeExploreUrlState(urlState),
     [urlState],
   );
-  const analyticsContext = useMemo<AnalyticsEventPayload>(
+  const analyticsContext = useMemo<
+    AnalyticsPayloadFor<"explore_results_viewed">
+  >(
     () => ({
       amenityCount: appliedAmenities.size,
       dayType,
@@ -1700,6 +1702,7 @@ export function ExploreExperience({
                             compact
                             placeName={place.name}
                             placeSlug={place.slug}
+                            surface="explore"
                           />
                         </div>
                       )}
@@ -1824,6 +1827,7 @@ export function ExploreExperience({
                   compact
                   placeName={selectedPlace.name}
                   placeSlug={selectedPlace.slug}
+                  surface="explore"
                 />
               </div>
             </aside>

@@ -9,6 +9,7 @@ import {
   setSavedPlace,
 } from "../data/saved-places-repository";
 import { CollectionPicker } from "./collection-picker";
+import { trackAnalyticsEvent } from "@/features/analytics/client";
 
 type SavePlaceButtonProps = Readonly<{
   className?: string;
@@ -16,6 +17,7 @@ type SavePlaceButtonProps = Readonly<{
   onSavedChange?: (saved: boolean) => void;
   placeName: string;
   placeSlug: string;
+  surface: "explore" | "place_detail";
 }>;
 
 export function SavePlaceButton({
@@ -24,6 +26,7 @@ export function SavePlaceButton({
   onSavedChange,
   placeName,
   placeSlug,
+  surface,
 }: SavePlaceButtonProps) {
   const [saved, setSaved] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -47,6 +50,13 @@ export function SavePlaceButton({
         const updated = await setSavedPlace(placeSlug, true);
         if (!active) return;
         setSaved(updated.saved);
+        if (updated.saved) {
+          trackAnalyticsEvent("place_save_succeeded", {
+            collectionType: "default",
+            placeSlug,
+            surface,
+          });
+        }
         setStatus("idle");
         url.searchParams.delete("savePlace");
         window.history.replaceState(
@@ -66,7 +76,7 @@ export function SavePlaceButton({
     return () => {
       active = false;
     };
-  }, [placeSlug]);
+  }, [placeSlug, surface]);
 
   async function toggleSaved() {
     if (status === "signed-out") {
@@ -83,6 +93,13 @@ export function SavePlaceButton({
     try {
       const result = await setSavedPlace(placeSlug, !previous);
       setSaved(result.saved);
+      if (!previous && result.saved) {
+        trackAnalyticsEvent("place_save_succeeded", {
+          collectionType: "default",
+          placeSlug,
+          surface,
+        });
+      }
       onSavedChange?.(result.saved);
       setStatus("idle");
     } catch (error) {
@@ -138,6 +155,7 @@ export function SavePlaceButton({
           }}
           placeName={placeName}
           placeSlug={placeSlug}
+          surface={surface}
         />
       )}
     </>

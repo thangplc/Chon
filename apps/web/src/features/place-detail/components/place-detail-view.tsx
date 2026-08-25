@@ -12,6 +12,7 @@ import { PlaceDetailBackControl } from "./place-detail-back-control";
 import { PlaceFacts } from "./place-facts";
 import { PlaceGallery } from "./place-gallery";
 import { PlaceVibeSummary } from "./place-vibe-summary";
+import { TrackedDirectionsLink } from "@/features/analytics/tracked-directions-link";
 
 type PlaceDetailViewProps = Readonly<{
   authControls?: ReactNode;
@@ -127,6 +128,7 @@ export function PlaceDetailView({
                   compact
                   placeName={place.name}
                   placeSlug={place.slug}
+                  surface="place_detail"
                 />
               </div>
             </div>
@@ -150,15 +152,17 @@ export function PlaceDetailView({
                   placeSlug={place.slug}
                   triggerClassName="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#c96040] px-4 text-sm font-extrabold text-white transition hover:bg-[#a94e35] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] lg:min-w-40 lg:flex-none lg:px-6"
                 />
-                <a
+                <TrackedDirectionsLink
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#ddd2c3] bg-[#fffdf9] px-4 text-sm font-extrabold text-[#28231f] transition hover:border-[#c96040] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c96040] lg:min-w-36 lg:flex-none lg:px-6"
                   href={osmUrl}
+                  placeSlug={place.slug}
                   rel="noreferrer"
+                  surface="place_detail"
                   target="_blank"
                 >
                   Chỉ đường
                   <span aria-hidden="true">↗</span>
-                </a>
+                </TrackedDirectionsLink>
               </div>
             </div>
 

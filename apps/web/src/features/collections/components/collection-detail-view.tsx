@@ -9,6 +9,8 @@ import {
   loadPublicCollection,
   setPlaceInCollection,
 } from "../data/collections-repository";
+import { trackAnalyticsEvent } from "@/features/analytics/client";
+import { TrackedDirectionsLink } from "@/features/analytics/tracked-directions-link";
 
 export function CollectionDetailView({
   identifier,
@@ -59,11 +61,19 @@ export function CollectionDetailView({
         {collection.visibility === "public" && (
           <button
             className="rounded-xl border px-4 py-2 font-bold"
-            onClick={() =>
-              void navigator.clipboard.writeText(
-                `${window.location.origin}/collections/${collection.id}`,
-              )
-            }
+            onClick={() => {
+              void navigator.clipboard
+                .writeText(
+                  `${window.location.origin}/collections/${collection.id}`,
+                )
+                .then(() =>
+                  trackAnalyticsEvent("collection_share_clicked", {
+                    collectionId: collection.id,
+                    ownerType: collection.ownerType,
+                    placeCount: collection.placeCount,
+                  }),
+                );
+            }}
             type="button"
           >
             Sao chép link
@@ -110,14 +120,16 @@ export function CollectionDetailView({
                   >
                     Mở địa điểm
                   </Link>
-                  <a
+                  <TrackedDirectionsLink
                     className="rounded-xl border border-[#ddd2c3] px-4 py-2 text-sm font-bold"
                     href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(place.address)}`}
+                    placeSlug={place.slug}
                     rel="noreferrer"
+                    surface="public_collection"
                     target="_blank"
                   >
                     Chỉ đường ↗
-                  </a>
+                  </TrackedDirectionsLink>
                 </div>
               )}
               {owned && (
